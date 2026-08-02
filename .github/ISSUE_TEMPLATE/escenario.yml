@@ -26,7 +26,7 @@ body:
     id: domain
     attributes:
       label: Rubro
-      placeholder: Ciberseguridad, salud, industria, comunicación de crisis...
+      placeholder: Educación, salud, ciberseguridad, industria, comunicación de crisis...
     validations:
       required: true
 

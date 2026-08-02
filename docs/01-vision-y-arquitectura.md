@@ -7,17 +7,28 @@
 
 ## 1. Qué es
 
-Una plataforma **auto-hospedada** para diseñar y conducir **ejercicios de simulación** (tabletop exercises / TTX): un facilitador corre una sesión en vivo, los participantes entran desde el móvil con un código, reciben información por fases, deliberan y votan qué hacer. Lo votado mueve el ejercicio.
+Una plataforma **auto-hospedada** para diseñar y conducir **ejercicios por fases con decisiones en grupo**: alguien conduce una sesión en vivo, los participantes entran desde el móvil con un código, reciben información por fases, deliberan y votan qué hacer. Lo votado mueve el ejercicio.
 
-Nace pensada para concientización en **ciberseguridad**, pero el motor es agnóstico de dominio. Un incidente de ransomware, una crisis sanitaria, un derrame químico o una crisis de reputación son el mismo objeto: fases, información asimétrica por rol, decisiones bajo presión de tiempo.
+Nace para ejercicios de simulación de crisis (*tabletop exercises* / TTX) y de ahí vienen los ejemplos de este documento. Ese es el primer caso de uso y el que se cubre primero — no el único.
 
-**Cada organización levanta su propia instancia.** No hay servicio central, no hay cuentas en la nube de nadie, no hay infraestructura que mantener por parte del proyecto.
+El motor conoce **cuatro primitivas** y ninguna materia:
+
+1. **Fases** que se suceden.
+2. **Roles** que ven información distinta.
+3. **Decisiones** que toma el grupo.
+4. **Consecuencias** que cambian lo que viene después.
+
+Todo lo demás es contenido. Un comité decidiendo bajo presión y una clase de química eligiendo qué reactivo agregar —donde cada opción lleva a un compuesto distinto, con su foto— son el mismo objeto ejecutado con distinto material. El segundo caso ni siquiera necesita reloj.
+
+> Consecuencia de diseño: **nada en el núcleo puede asumir urgencia, riesgo ni adversario.** Un temporizador obligatorio, un vocabulario de "incidente" o una métrica de "daño" en el motor son el mismo bug que hardcodear ciberseguridad. Si una capacidad sólo tiene sentido en una crisis, va en el escenario.
+
+**Cada quien levanta su propia instancia** —una empresa, un colegio, un equipo, una persona. No hay servicio central, no hay cuentas en la nube de nadie, no hay infraestructura que mantener por parte del proyecto.
 
 ### Qué NO es
 
 - No es un LMS ni un sistema de cursos.
 - No es un motor de simulación con fórmulas ni modelos matemáticos.
-- No es una plataforma multi-organización (una instancia = una organización).
+- No es una plataforma multi-inquilino: una instancia pertenece a un solo grupo (una empresa, un colegio, un equipo).
 - No es un producto SaaS.
 
 ---
@@ -39,7 +50,7 @@ Cinco reglas que resuelven de antemano la mayoría de las discusiones de impleme
 | Concepto | Qué es |
 |---|---|
 | **Escenario** | La plantilla reutilizable. Contiene roles, fases, contenido, gráficos y decisiones. Se diseña una vez, se corre muchas. |
-| **Rol** | Un punto de vista dentro del ejercicio (CISO, Comunicación, Legales, Participante general…). Define **qué información ve cada uno**. La asimetría de información es el corazón del ejercicio. |
+| **Rol** | Un punto de vista dentro del ejercicio: *Comunicación*, *Legales* y *Participante general* en un comité de crisis; *Fiscalía*, *Defensa* y *Jurado* en un juicio simulado en un aula. Define **qué información ve cada uno**. La asimetría de información es el corazón del ejercicio. |
 | **Fase** | Un bloque del ejercicio con duración propia. Muestra contenido y, opcionalmente, cierra con una decisión. |
 | **Contenido** | Texto, imagen, audio, video o archivo, asociado a una fase y opcionalmente filtrado a un rol. |
 | **Gráfico** | Una visualización simple (línea, barras, torta, valor único) cuyos valores cambian según la fase y las decisiones tomadas. |
@@ -276,6 +287,7 @@ Al importar: se valida el esquema, se remapean los IDs, se verifican los checksu
 - Reporte post-ejercicio exportable
 - Español e inglés
 - `docker compose up`
+- **Escenarios de ejemplo incluidos**, listos para correr sin escribir nada: uno de ciberseguridad completo y al menos uno de otro rubro, para que se vea desde el primer arranque que el motor no es de una sola materia
 
 ### Después
 

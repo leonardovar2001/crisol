@@ -109,7 +109,15 @@ export const phaseSchema = z.object({
   sortOrder: z.number().int().nonnegative(),
   title: localized,
   kind: z.enum(['briefing', 'inject', 'dashboard', 'decision', 'debrief']),
-  durationSeconds: z.number().int().positive().max(24 * 60 * 60),
+  /**
+   * `null` means no time limit: the phase advances when whoever is running the
+   * session says so.
+   *
+   * A countdown makes sense for a crisis exercise and is wrong for, say, a
+   * classroom working through a branching problem at its own pace. The core
+   * cannot assume urgency — that belongs to the scenario.
+   */
+  durationSeconds: z.number().int().positive().max(24 * 60 * 60).nullable(),
   /** The default path out of this phase. `null` means "the next one by order". */
   nextPhaseId: id.nullable().default(null),
   /** The facilitator's script. Never shown to participants or on the projected screen. */

@@ -145,6 +145,31 @@ describe('chart effects', () => {
   });
 });
 
+describe('untimed phases', () => {
+  it('is accepted by the scenario schema', () => {
+    const untimed = scenarioSchema.parse({
+      ...scenario,
+      phases: scenario.phases.map((p) => ({ ...p, durationSeconds: null })),
+    });
+    expect(untimed.phases.every((p) => p.durationSeconds === null)).toBe(true);
+  });
+
+  it('leaves no countdown to show', () => {
+    const state = deriveState(scenario, [
+      ev({ kind: 'phase_started', phaseId: 'p2', durationSeconds: null }),
+    ]);
+    expect(state.currentPhaseId).toBe('p2');
+    expect(state.remainingSeconds).toBeNull();
+  });
+
+  it('still runs a timed phase normally', () => {
+    const state = deriveState(scenario, [
+      ev({ kind: 'phase_started', phaseId: 'p1', durationSeconds: 600 }),
+    ]);
+    expect(state.remainingSeconds).toBe(600);
+  });
+});
+
 describe('facilitator override', () => {
   it('records what the table would have chosen', () => {
     const state = deriveState(scenario, [

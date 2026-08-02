@@ -41,7 +41,8 @@ export interface SessionState {
   currentPhaseId: string | null;
   /** ISO timestamp of the last `phase_started` / `session_resumed`. */
   runningSince: string | null;
-  remainingSeconds: number;
+  /** `null` while an untimed phase is running — there is no countdown to show. */
+  remainingSeconds: number | null;
   answersOpen: boolean;
   resultsVisible: boolean;
   participants: Record<string, ParticipantState>;
@@ -58,7 +59,7 @@ export function initialState(scenario: Scenario): SessionState {
     status: 'draft',
     currentPhaseId: null,
     runningSince: null,
-    remainingSeconds: 0,
+    remainingSeconds: null,
     answersOpen: false,
     resultsVisible: false,
     participants: {},

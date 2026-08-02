@@ -32,10 +32,11 @@ const base = z.object({
 export const sessionEventSchema = z.discriminatedUnion('kind', [
   base.extend({ kind: z.literal('session_started'), phaseId: id }),
   base.extend({ kind: z.literal('session_paused') }),
-  base.extend({ kind: z.literal('session_resumed'), remainingSeconds: z.number().int().nonnegative() }),
+  base.extend({ kind: z.literal('session_resumed'), remainingSeconds: z.number().int().nonnegative().nullable() }),
   base.extend({ kind: z.literal('session_ended') }),
 
-  base.extend({ kind: z.literal('phase_started'), phaseId: id, durationSeconds: z.number().int().positive() }),
+  /** `durationSeconds` is null for an untimed phase. */
+  base.extend({ kind: z.literal('phase_started'), phaseId: id, durationSeconds: z.number().int().positive().nullable() }),
   base.extend({ kind: z.literal('phase_ended'), phaseId: id }),
   base.extend({ kind: z.literal('timer_adjusted'), remainingSeconds: z.number().int().nonnegative() }),
 
