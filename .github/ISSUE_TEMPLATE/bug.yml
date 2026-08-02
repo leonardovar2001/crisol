@@ -1,0 +1,52 @@
+name: Reportar un error
+description: Algo no funciona como debería
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: Qué pasó
+      description: Y qué esperabas que pasara.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Cómo reproducirlo
+      placeholder: |
+        1. Lancé una sesión de...
+        2. Entré como participante y...
+        3. Al cerrar la fase...
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Versión de Crisol
+      placeholder: v0.1.0, o el hash del commit
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Dónde
+      options:
+        - Autoría de escenarios
+        - Control del facilitador
+        - Presenter
+        - Pantalla proyectada
+        - Participante (móvil)
+        - Reporte
+        - Instalación / Docker
+        - Otro
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Entorno
+      description: Navegador, sistema operativo, versión de Docker, logs si tenés.

@@ -1,0 +1,17 @@
+node_modules
+**/node_modules
+**/dist
+**/build
+**/coverage
+.git
+.github
+.env
+.env.*
+!.env.example
+data
+media
+docs
+*.md
+!README.md
+.vscode
+.idea

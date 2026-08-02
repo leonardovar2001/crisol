@@ -1,0 +1,32 @@
+{
+  "name": "crisol",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Plataforma auto-hospedada para diseñar y conducir ejercicios de simulación",
+  "license": "AGPL-3.0-only",
+  "author": "Leonardo Vargas",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,web -c cyan,magenta \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:server": "npm run dev --workspace @crisol/server",
+    "dev:web": "npm run dev --workspace @crisol/web",
+    "build": "npm run build --workspaces --if-present",
+    "start": "npm run start --workspace @crisol/server",
+    "typecheck": "tsc --build",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm run test"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "concurrently": "^9.1.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

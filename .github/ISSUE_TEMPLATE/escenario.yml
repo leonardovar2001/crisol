@@ -1,0 +1,57 @@
+name: Aportar un escenario
+description: Compartir un ejercicio que armaste para que otros lo usen
+labels: [escenario]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Esto es lo que más le hace falta al proyecto. El código sirve de poco sin ejercicios que correr.
+
+  - type: input
+    id: title
+    attributes:
+      label: Título del escenario
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: De qué se trata
+      description: Sin spoilers para los participantes, pero suficiente para que un facilitador sepa si le sirve.
+    validations:
+      required: true
+
+  - type: input
+    id: domain
+    attributes:
+      label: Rubro
+      placeholder: Ciberseguridad, salud, industria, comunicación de crisis...
+    validations:
+      required: true
+
+  - type: input
+    id: duration
+    attributes:
+      label: Duración y cantidad de fases
+      placeholder: 60 minutos, 6 fases
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: rights
+    attributes:
+      label: Derechos del contenido
+      options:
+        - label: El contenido es mío o tengo derecho a compartirlo, y lo aporto bajo la licencia del proyecto
+          required: true
+        - label: No contiene datos reales de ninguna organización ni información personal
+          required: true
+
+  - type: textarea
+    id: file
+    attributes:
+      label: El archivo
+      description: Arrastrá acá el `.zip` exportado desde tu instancia.
+    validations:
+      required: true

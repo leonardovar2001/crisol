@@ -1,0 +1,30 @@
+name: Proponer una funcionalidad
+description: Una idea para que Crisol haga algo que hoy no hace
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Antes de escribir: mirá la [sección 10 del documento de arquitectura](../blob/main/docs/01-vision-y-arquitectura.md#10-alcance).
+        Hay cosas que están fuera de alcance a propósito. No es capricho — cada cosa que entra hay que mantenerla para siempre.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Qué problema resuelve
+      description: Contá la situación real, no la solución. "Cuando corro un ejercicio con dos equipos separados, no puedo..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Qué proponés
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Qué probaste o consideraste
+      description: Incluido "lo resolví a mano así".

@@ -1,0 +1,24 @@
+# Normalise line endings so Windows and Linux contributors do not fight over
+# whitespace-only diffs. LF in the repository, native in the working copy.
+* text=auto eol=lf
+
+# Files that break if they ever get CRLF.
+Dockerfile text eol=lf
+*.sh       text eol=lf
+*.yml      text eol=lf
+*.yaml     text eol=lf
+
+# Binary: never touch, never diff.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.ico  binary
+*.mp3  binary
+*.mp4  binary
+*.webm binary
+*.pdf  binary
+*.zip  binary
+*.woff  binary
+*.woff2 binary
