@@ -9,8 +9,10 @@ coverage/
 .env.*
 !.env.example
 
-data/
-media/
+# Anclados a la raíz a propósito: sin la barra inicial, `media/` también
+# ignoraría apps/server/src/media/ y el código nunca llegaría al repositorio.
+/data/
+/media/
 *.log
 npm-debug.log*
 
