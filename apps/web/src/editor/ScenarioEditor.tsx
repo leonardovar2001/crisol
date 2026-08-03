@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { scenarioSchema } from '@crisol/shared';
 import {
@@ -12,24 +12,56 @@ import {
   writeText,
   type Draft,
 } from '../lib/draft.js';
-import { loadDraft, saveDraft } from '../lib/storage.js';
+import { api, ApiError } from '../lib/api.js';
 import { PhaseEditor } from './PhaseEditor.js';
 
 type Tab = 'datos' | 'roles' | 'fases';
+type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 export function ScenarioEditor() {
   const { draftId = '' } = useParams();
-  const [draft, setDraft] = useState<Draft | null>(() => loadDraft(draftId));
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [saveState, setSaveState] = useState<SaveState>('idle');
   const [tab, setTab] = useState<Tab>('fases');
   const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
+  const pending = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  useEffect(() => {
+    api
+      .getScenario(draftId)
+      .then((row) => setDraft(row.document))
+      .catch((err) =>
+        setLoadError(err instanceof ApiError ? err.message : 'No se pudo conectar con el servidor'),
+      );
+  }, [draftId]);
+
+  /**
+   * Typing should not fire a request per keystroke, and leaving the page should
+   * not lose the last one. The timer coalesces edits; `beforeunload` flushes.
+   */
   const update = useCallback(
     (next: Draft) => {
       setDraft(next);
-      saveDraft(draftId, next);
+      setSaveState('saving');
+      if (pending.current) clearTimeout(pending.current);
+      pending.current = setTimeout(() => {
+        api
+          .updateScenario(draftId, next)
+          .then(() => setSaveState('saved'))
+          .catch(() => setSaveState('error'));
+      }, 700);
     },
     [draftId],
   );
+
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => {
+      if (saveState === 'saving') event.preventDefault();
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [saveState]);
 
   const phases = useMemo(() => (draft ? sorted(draft.phases) : []), [draft]);
 
@@ -42,8 +74,8 @@ export function ScenarioEditor() {
   if (!draft) {
     return (
       <main className="page">
-        <h1>No encontrado</h1>
-        <p className="lede">Ese escenario no existe en este navegador.</p>
+        <h1>{loadError ? 'No se pudo abrir' : 'Cargando…'}</h1>
+        {loadError && <p className="alert">{loadError}</p>}
         <Link className="back" to="/admin">
           ← Escenarios
         </Link>
@@ -75,9 +107,16 @@ export function ScenarioEditor() {
               {draft.roles.length === 1 ? 'rol' : 'roles'}
             </p>
           </div>
-          <button type="button" className="btn btn-primary" onClick={exportFile}>
-            Exportar .json
-          </button>
+          <div className="row">
+            <span className={`save save-${saveState}`}>
+              {saveState === 'saving' && 'Guardando…'}
+              {saveState === 'saved' && 'Guardado'}
+              {saveState === 'error' && 'No se pudo guardar'}
+            </span>
+            <button type="button" className="btn btn-primary" onClick={exportFile}>
+              Exportar .json
+            </button>
+          </div>
         </div>
 
         <nav className="tabs">
@@ -287,6 +326,7 @@ export function ScenarioEditor() {
           <div className="split-main">
             {selected && (
               <PhaseEditor
+                scenarioId={draftId}
                 draft={draft}
                 phase={selected}
                 locale={locale}

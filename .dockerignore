@@ -1,8 +1,12 @@
 node_modules
 **/node_modules
 **/dist
-**/build
+**/.tsbuild
 **/coverage
+
+# TypeScript's build cache. If one of these gets copied in, tsc decides the
+# project is already built, emits nothing, and the image ships without dist/.
+**/*.tsbuildinfo
 .git
 .github
 .env

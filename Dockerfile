@@ -33,6 +33,8 @@ COPY --from=build --chown=node:node /app/package.json      ./package.json
 COPY --from=build --chown=node:node /app/packages          ./packages
 COPY --from=build --chown=node:node /app/apps/server/dist  ./apps/server/dist
 COPY --from=build --chown=node:node /app/apps/server/package.json ./apps/server/
+# Applied at boot. Without these the container starts against an empty database.
+COPY --from=build --chown=node:node /app/apps/server/migrations ./apps/server/migrations
 COPY --from=build --chown=node:node /app/apps/web/dist     ./apps/web/dist
 
 USER node

@@ -1,6 +1,7 @@
 import { BrowserRouter, Link, Route, Routes } from 'react-router-dom';
 import { ScenarioEditor } from './editor/ScenarioEditor.js';
 import { ScenarioList } from './editor/ScenarioList.js';
+import { RequireUser, SessionProvider } from './editor/Session.js';
 
 /**
  * Route shell for the surfaces described in docs/01-vision-y-arquitectura.md §6.
@@ -53,10 +54,25 @@ function Home() {
 export function App() {
   return (
     <BrowserRouter>
-      <Routes>
+      <SessionProvider>
+        <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/admin" element={<ScenarioList />} />
-        <Route path="/admin/:draftId" element={<ScenarioEditor />} />
+        <Route
+          path="/admin"
+          element={
+            <RequireUser>
+              <ScenarioList />
+            </RequireUser>
+          }
+        />
+        <Route
+          path="/admin/:draftId"
+          element={
+            <RequireUser>
+              <ScenarioEditor />
+            </RequireUser>
+          }
+        />
         <Route path="/sessions" element={<Placeholder title="Sesiones" note="Lanzar sesiones, códigos de sala y QR." />} />
         <Route path="/control/:sessionId" element={<Placeholder title="Control" note="Reloj, avance de fases, votación." />} />
         <Route path="/presenter/:sessionId" element={<Placeholder title="Presenter" note="Guion de quien conduce." />} />
@@ -64,8 +80,9 @@ export function App() {
         <Route path="/join" element={<Placeholder title="Entrar" note="Código de sala o QR." />} />
         <Route path="/play/:sessionId" element={<Placeholder title="Participante" note="Contenido de tu rol y votación." />} />
         <Route path="/report/:sessionId" element={<Placeholder title="Reporte" note="Qué pasó, qué se votó, exportable." />} />
-        <Route path="*" element={<Placeholder title="No encontrado" note="Esa ruta no existe." />} />
-      </Routes>
+          <Route path="*" element={<Placeholder title="No encontrado" note="Esa ruta no existe." />} />
+        </Routes>
+      </SessionProvider>
     </BrowserRouter>
   );
 }

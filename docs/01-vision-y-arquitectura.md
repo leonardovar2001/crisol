@@ -78,36 +78,27 @@ Una sola organización por instancia. `owner` es quien la instaló; puede crear 
 
 ### 4.2 Escenario (autoría)
 
+**El escenario se guarda como un documento, no repartido en tablas.**
+
 ```
 scenarios
-  id, slug, title, description
-  default_locale, available_locales[]
-  status          draft | published
+  id, slug, title
   schema_version
+  status          draft | published
+  document        jsonb  ← roles, fases, contenidos, decisiones, gráficos
   created_by, created_at, updated_at
-
-scenario_roles
-  id, scenario_id, key, name, description
-  is_general      (el rol por defecto de quien entra sin código de rol)
-  sort_order
-
-phases
-  id, scenario_id, sort_order
-  title, kind              briefing | inject | dashboard | decision | debrief
-  duration_seconds
-  next_phase_id            (null = la siguiente por orden; el camino por defecto)
-  presenter_cue            (el guion del facilitador para esta fase)
-  results_reveal           live | on_presenter_command
-
-phase_contents
-  id, phase_id, role_id     (null = visible para todos los roles)
-  kind                      text | image | audio | video | file
-  body                      (i18n: { es: "...", en: "..." })
-  media_id, sort_order
 
 media_assets
   id, scenario_id, filename, mime_type, size_bytes, sha256, storage_key
 ```
+
+Se escribe entero, se exporta entero, se importa entero y se lee entero al arrancar una sesión: no hay ninguna consulta que cruce escenarios buscando una fase o una opción. Partirlo en ocho tablas costaría una transacción multi-tabla en cada tecla y no compraría nada. Además mantiene la invariante de que **el formato portable es la fuente de verdad**: los mismos bytes que van al `.zip` son los que están en la base.
+
+La forma exacta del documento está en [`packages/shared/src/scenario.ts`](../packages/shared/src/scenario.ts) y se valida con ese esquema antes de cada escritura, así que la base nunca guarda un escenario inválido.
+
+Los archivos subidos sí son filas: hay que consultarlos por escenario para llevar la cuenta del espacio usado. Los bytes van al disco, nunca a la base.
+
+> Las sesiones en vivo son el caso opuesto y sí van relacionales (§4.5): eventos append-only y votos con restricciones de unicidad de verdad.
 
 ### 4.3 Decisiones y ramificación
 
@@ -233,7 +224,7 @@ Los eventos se serializan por sesión y tienen orden total: aunque dos facilitad
 | Backend | **Node + TypeScript (Fastify)** | Un solo lenguaje en todo el proyecto baja la barrera para contribuir. |
 | Tiempo real | **WebSockets (Socket.IO)** | Reconexión automática y salas ya resueltas. |
 | Base de datos | **PostgreSQL** | JSONB para el contenido flexible, relacional para lo demás. |
-| Acceso a datos | **Drizzle** (o Prisma) | Migraciones versionadas; el que actualiza su instancia no debe romperse. |
+| Acceso a datos | **SQL directo** (`postgres.js`) | Sin ORM ni paso de generación de código. Las migraciones son `.sql` que cualquiera puede leer antes de actualizar su instancia. |
 | Frontend | **React + Vite + TypeScript** | SPA servida por el mismo proceso Node. |
 | Gráficos | Librería liviana (Recharts o similar) | Los gráficos son simples; no hace falta más. |
 | Medios | Disco local en volumen Docker | Con una interfaz de almacenamiento, para que S3 sea opcional después. |

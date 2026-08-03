@@ -25,6 +25,10 @@ const schema = z.object({
   MEDIA_DIR: z.string().min(1).default('/data/media'),
   MAX_UPLOAD_MB: z.coerce.number().int().positive().default(200),
   MAX_SCENARIO_MB: z.coerce.number().int().positive().default(2048),
+
+  // Only used to create the owner account on a brand new instance.
+  BOOTSTRAP_EMAIL: z.string().email().default('admin@example.org'),
+  BOOTSTRAP_PASSWORD: z.string().min(8).or(z.literal('')).default(''),
 });
 
 export type Config = z.infer<typeof schema>;

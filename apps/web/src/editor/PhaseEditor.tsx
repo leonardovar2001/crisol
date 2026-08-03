@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react';
 import {
   createContent,
   createDecision,
@@ -6,16 +7,103 @@ import {
   readText,
   sorted,
   writeText,
+  type Content,
   type Draft,
   type Phase,
 } from '../lib/draft.js';
+import { api, ApiError, type MediaAsset } from '../lib/api.js';
 
 interface Props {
+  scenarioId: string;
   draft: Draft;
   phase: Phase;
   locale: string;
   onChange: (draft: Draft) => void;
   onDeleted: () => void;
+}
+
+const CONTENT_KINDS: { value: Content['kind']; label: string }[] = [
+  { value: 'text', label: 'Texto' },
+  { value: 'image', label: 'Imagen' },
+  { value: 'audio', label: 'Audio' },
+  { value: 'video', label: 'Video' },
+  { value: 'file', label: 'Archivo' },
+];
+
+const ACCEPT: Record<string, string> = {
+  image: 'image/*',
+  audio: 'audio/*',
+  video: 'video/*',
+  file: 'application/pdf',
+};
+
+/** The uploaded file itself: pick it, see it, replace it. */
+function MediaSlot({
+  scenarioId,
+  content,
+  onUploaded,
+  onCleared,
+}: {
+  scenarioId: string;
+  content: Content;
+  onUploaded: (asset: MediaAsset) => void;
+  onCleared: () => void;
+}) {
+  const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const upload = async (file: File) => {
+    setBusy(true);
+    setError(null);
+    try {
+      onUploaded(await api.uploadMedia(scenarioId, file));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'No se pudo subir');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const url = content.mediaId ? `/api/media/${content.mediaId}` : null;
+
+  return (
+    <div className="media-slot">
+      {url && content.kind === 'image' && <img src={url} alt="" />}
+      {url && content.kind === 'audio' && <audio src={url} controls />}
+      {url && content.kind === 'video' && <video src={url} controls />}
+      {url && content.kind === 'file' && (
+        <a href={url} target="_blank" rel="noreferrer">
+          Ver el archivo
+        </a>
+      )}
+
+      <div className="row">
+        <button type="button" className="btn btn-tiny" disabled={busy} onClick={() => input.current?.click()}>
+          {busy ? 'Subiendo…' : url ? 'Reemplazar' : 'Subir archivo'}
+        </button>
+        {url && (
+          <button type="button" className="btn btn-tiny btn-danger" onClick={onCleared}>
+            Quitar el archivo
+          </button>
+        )}
+      </div>
+
+      {error && <p className="alert">{error}</p>}
+
+      <input
+        ref={input}
+        type="file"
+        hidden
+        accept={ACCEPT[content.kind] ?? undefined}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void upload(file);
+          e.target.value = '';
+        }}
+      />
+    </div>
+  );
 }
 
 const KINDS: { value: Phase['kind']; label: string; hint: string }[] = [
@@ -26,7 +114,7 @@ const KINDS: { value: Phase['kind']; label: string; hint: string }[] = [
   { value: 'debrief', label: 'Cierre', hint: 'Se repasa lo que pasó.' },
 ];
 
-export function PhaseEditor({ draft, phase, locale, onChange, onDeleted }: Props) {
+export function PhaseEditor({ scenarioId, draft, phase, locale, onChange, onDeleted }: Props) {
   const phases = sorted(draft.phases);
   const index = phases.findIndex((p) => p.id === phase.id);
   const followsByOrder = phases[index + 1];
@@ -115,24 +203,43 @@ export function PhaseEditor({ draft, phase, locale, onChange, onDeleted }: Props
       {sorted(phase.contents).map((content, i) => (
         <div key={content.id} className="block">
           <div className="row row-between">
-            <select
-              aria-label="Quién lo ve"
-              value={content.roleId ?? ''}
-              onChange={(e) =>
-                patch({
-                  contents: phase.contents.map((c) =>
-                    c.id === content.id ? { ...c, roleId: e.target.value || null } : c,
-                  ),
-                })
-              }
-            >
-              <option value="">Todos los roles</option>
-              {sorted(draft.roles).map((r) => (
-                <option key={r.id} value={r.id}>
-                  Sólo {readText(r.name, locale)}
-                </option>
-              ))}
-            </select>
+            <div className="row">
+              <select
+                aria-label="Quién lo ve"
+                value={content.roleId ?? ''}
+                onChange={(e) =>
+                  patch({
+                    contents: phase.contents.map((c) =>
+                      c.id === content.id ? { ...c, roleId: e.target.value || null } : c,
+                    ),
+                  })
+                }
+              >
+                <option value="">Todos los roles</option>
+                {sorted(draft.roles).map((r) => (
+                  <option key={r.id} value={r.id}>
+                    Sólo {readText(r.name, locale)}
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label="Tipo de contenido"
+                value={content.kind}
+                onChange={(e) =>
+                  patch({
+                    contents: phase.contents.map((c) =>
+                      c.id === content.id ? { ...c, kind: e.target.value as Content['kind'] } : c,
+                    ),
+                  })
+                }
+              >
+                {CONTENT_KINDS.map((k) => (
+                  <option key={k.value} value={k.value}>
+                    {k.label}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="row">
               <button
                 type="button"
@@ -163,10 +270,49 @@ export function PhaseEditor({ draft, phase, locale, onChange, onDeleted }: Props
               </button>
             </div>
           </div>
+          {content.kind !== 'text' && (
+            <MediaSlot
+              scenarioId={scenarioId}
+              content={content}
+              onUploaded={(asset) =>
+                onChange({
+                  ...draft,
+                  media: [
+                    ...draft.media.filter((m) => m.id !== asset.id),
+                    {
+                      id: asset.id,
+                      filename: asset.filename,
+                      mimeType: asset.mimeType,
+                      sizeBytes: asset.sizeBytes,
+                      sha256: asset.sha256,
+                    },
+                  ],
+                  phases: draft.phases.map((p) =>
+                    p.id !== phase.id
+                      ? p
+                      : {
+                          ...p,
+                          contents: p.contents.map((c) =>
+                            c.id === content.id ? { ...c, mediaId: asset.id } : c,
+                          ),
+                        },
+                  ),
+                })
+              }
+              onCleared={() =>
+                patch({
+                  contents: phase.contents.map((c) =>
+                    c.id === content.id ? { ...c, mediaId: null } : c,
+                  ),
+                })
+              }
+            />
+          )}
+
           <textarea
-            rows={4}
-            aria-label="Texto"
-            placeholder="Lo que van a leer…"
+            rows={content.kind === 'text' ? 4 : 2}
+            aria-label={content.kind === 'text' ? 'Texto' : 'Pie o descripción'}
+            placeholder={content.kind === 'text' ? 'Lo que van a leer…' : 'Pie o descripción (opcional)'}
             value={readText(content.body, locale)}
             onChange={(e) =>
               patch({
@@ -186,12 +332,8 @@ export function PhaseEditor({ draft, phase, locale, onChange, onDeleted }: Props
         className="btn"
         onClick={() => patch({ contents: [...phase.contents, createContent(phase.contents.length)] })}
       >
-        Agregar bloque de texto
+        Agregar bloque
       </button>
-      <p className="hint">
-        Imágenes, audio y video llegan cuando esté el servidor: hace falta un lugar donde subir los
-        archivos.
-      </p>
 
       <hr />
 

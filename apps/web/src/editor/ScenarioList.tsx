@@ -1,56 +1,75 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { scenarioSchema } from '@crisol/shared';
-import { createDraft, newId } from '../lib/draft.js';
-import { deleteDraft, listDrafts, saveDraft, type DraftSummary } from '../lib/storage.js';
+import { createDraft } from '../lib/draft.js';
+import { api, ApiError, type ScenarioSummary } from '../lib/api.js';
+import { useSession } from './Session.js';
 
 export function ScenarioList() {
   const navigate = useNavigate();
-  const [drafts, setDrafts] = useState<DraftSummary[]>(() => listDrafts());
+  const { user, signOut } = useSession();
+  const [scenarios, setScenarios] = useState<ScenarioSummary[] | null>(null);
   const [title, setTitle] = useState('');
-  const [importError, setImportError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  const create = (event: React.FormEvent) => {
+  const reload = async () => {
+    try {
+      setScenarios(await api.listScenarios());
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'No se pudo conectar con el servidor');
+    }
+  };
+
+  useEffect(() => {
+    void reload();
+  }, []);
+
+  const create = async (event: React.FormEvent) => {
     event.preventDefault();
     const name = title.trim();
     if (!name) return;
-    const id = newId('esc');
-    saveDraft(id, createDraft(name));
-    navigate(`/admin/${id}`);
+    try {
+      const created = await api.createScenario(createDraft(name, user?.locale ?? 'es'));
+      navigate(`/admin/${created.id}`);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'No se pudo crear');
+    }
   };
 
-  const remove = (id: string, name: string) => {
-    if (!confirm(`¿Borrar "${name}"? No se puede deshacer.`)) return;
-    deleteDraft(id);
-    setDrafts(listDrafts());
+  const remove = async (id: string, name: string) => {
+    if (!confirm(`¿Borrar "${name}"? Se borra también lo que hayas subido. No se puede deshacer.`))
+      return;
+    await api.deleteScenario(id);
+    void reload();
   };
 
   const importFile = async (file: File) => {
-    setImportError(null);
+    setError(null);
     try {
       const parsed = scenarioSchema.safeParse(JSON.parse(await file.text()));
       if (!parsed.success) {
         const first = parsed.error.issues[0];
-        setImportError(
-          `El archivo no es un escenario válido: ${first?.path.join('.')} — ${first?.message}`,
-        );
+        setError(`El archivo no es un escenario válido: ${first?.path.join('.')} — ${first?.message}`);
         return;
       }
-      const id = newId('esc');
-      saveDraft(id, parsed.data);
-      navigate(`/admin/${id}`);
-    } catch {
-      setImportError('No se pudo leer el archivo. ¿Es un .json exportado desde Crisol?');
+      const created = await api.createScenario(parsed.data);
+      navigate(`/admin/${created.id}`);
+    } catch (err) {
+      if (err instanceof ApiError) setError(err.message);
+      else setError('No se pudo leer el archivo. ¿Es un .json exportado desde Crisol?');
     }
   };
 
   return (
     <main className="page">
-      <header className="page-head">
+      <div className="row row-between">
         <h1>Escenarios</h1>
-        <p className="lede">Diseñá un ejercicio: roles, fases, decisiones y hacia dónde lleva cada una.</p>
-      </header>
+        <button type="button" className="btn" onClick={() => void signOut()}>
+          Salir ({user?.email})
+        </button>
+      </div>
+      <p className="lede">Diseñá un ejercicio: roles, fases, decisiones y hacia dónde lleva cada una.</p>
 
       <form className="row" onSubmit={create}>
         <input
@@ -78,36 +97,33 @@ export function ScenarioList() {
         />
       </form>
 
-      {importError && <p className="alert">{importError}</p>}
+      {error && <p className="alert">{error}</p>}
 
-      {drafts.length === 0 ? (
+      {scenarios === null ? (
+        <p className="hint">Cargando…</p>
+      ) : scenarios.length === 0 ? (
         <p className="note">
           Todavía no hay ninguno. Escribí un título arriba y empezá, o importá un <code>.json</code>{' '}
           que te hayan pasado.
         </p>
       ) : (
         <ul className="card-list">
-          {drafts.map((d) => (
-            <li key={d.id} className="card card-row">
-              <Link className="card-main" to={`/admin/${d.id}`}>
-                <strong>{d.title}</strong>
+          {scenarios.map((s) => (
+            <li key={s.id} className="card card-row">
+              <Link className="card-main" to={`/admin/${s.id}`}>
+                <strong>{s.title}</strong>
                 <span>
-                  {d.slug} · {d.phases} {d.phases === 1 ? 'fase' : 'fases'} · editado{' '}
-                  {new Date(d.updatedAt).toLocaleString()}
+                  {s.slug} · {s.phases} {s.phases === 1 ? 'fase' : 'fases'} · editado{' '}
+                  {new Date(s.updatedAt).toLocaleString()}
                 </span>
               </Link>
-              <button type="button" className="btn btn-danger" onClick={() => remove(d.id, d.title)}>
+              <button type="button" className="btn btn-danger" onClick={() => void remove(s.id, s.title)}>
                 Borrar
               </button>
             </li>
           ))}
         </ul>
       )}
-
-      <p className="note">
-        Los escenarios se guardan en este navegador. Todavía no hay servidor: si limpiás los datos
-        del navegador, se pierden. <strong>Exportá el archivo</strong> para tener una copia de verdad.
-      </p>
 
       <Link className="back" to="/">
         ← Inicio
