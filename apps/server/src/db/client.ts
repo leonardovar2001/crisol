@@ -4,20 +4,10 @@ import type { Config } from '../config.js';
 export type Sql = postgres.Sql;
 
 export function connect(config: Config): Sql {
-  return postgres(config.DATABASE_URL, {
-    max: 10,
-    // Timestamps come back as ISO strings; the engine treats them as opaque.
-    types: {
-      date: {
-        to: 1184,
-        from: [1082, 1083, 1114, 1184],
-        serialize: (value: Date | string) =>
-          value instanceof Date ? value.toISOString() : value,
-        parse: (value: string) => value,
-      },
-    },
-    onnotice: () => {},
-  });
+  // Timestamps come back as Date objects. Callers that need a string must call
+  // toISOString() — Postgres's own text format ("2026-08-03 00:44:12+00") is not
+  // ISO 8601 and quietly fails anything that validates for it.
+  return postgres(config.DATABASE_URL, { max: 10, onnotice: () => {} });
 }
 
 /**

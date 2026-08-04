@@ -2,6 +2,10 @@ import { BrowserRouter, Link, Route, Routes } from 'react-router-dom';
 import { ScenarioEditor } from './editor/ScenarioEditor.js';
 import { ScenarioList } from './editor/ScenarioList.js';
 import { RequireUser, SessionProvider } from './editor/Session.js';
+import { Control } from './live/Control.js';
+import { Join } from './live/Join.js';
+import { Play } from './live/Play.js';
+import { Sessions } from './live/Sessions.js';
 
 /**
  * Route shell for the surfaces described in docs/01-vision-y-arquitectura.md §6.
@@ -73,12 +77,26 @@ export function App() {
             </RequireUser>
           }
         />
-        <Route path="/sessions" element={<Placeholder title="Sesiones" note="Lanzar sesiones, códigos de sala y QR." />} />
-        <Route path="/control/:sessionId" element={<Placeholder title="Control" note="Reloj, avance de fases, votación." />} />
+        <Route
+          path="/sessions"
+          element={
+            <RequireUser>
+              <Sessions />
+            </RequireUser>
+          }
+        />
+        <Route
+          path="/control/:sessionId"
+          element={
+            <RequireUser>
+              <Control />
+            </RequireUser>
+          }
+        />
         <Route path="/presenter/:sessionId" element={<Placeholder title="Presenter" note="Guion de quien conduce." />} />
         <Route path="/screen/:sessionId" element={<Placeholder title="Pantalla" note="Vista de sala para proyectar." />} />
-        <Route path="/join" element={<Placeholder title="Entrar" note="Código de sala o QR." />} />
-        <Route path="/play/:sessionId" element={<Placeholder title="Participante" note="Contenido de tu rol y votación." />} />
+        <Route path="/join" element={<Join />} />
+        <Route path="/play/:sessionId" element={<Play />} />
         <Route path="/report/:sessionId" element={<Placeholder title="Reporte" note="Qué pasó, qué se votó, exportable." />} />
           <Route path="*" element={<Placeholder title="No encontrado" note="Esa ruta no existe." />} />
         </Routes>

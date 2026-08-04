@@ -11,6 +11,8 @@ import { connect, waitForDatabase } from './db/client.js';
 import { migrate } from './db/migrate.js';
 import { registerMedia } from './media/routes.js';
 import { registerScenarios } from './scenarios/routes.js';
+import { registerLive } from './sessions/live.js';
+import { registerSessions } from './sessions/routes.js';
 
 const config = loadConfig();
 
@@ -51,6 +53,8 @@ app.get('/api/instance', async () => ({
 registerAuth(app, sql, config);
 registerScenarios(app, sql, config);
 registerMedia(app, sql, config);
+registerSessions(app, sql);
+registerLive(app, sql, config);
 
 // The built SPA ships inside the same image; there is no separate web server
 // to run. In development Vite serves it instead and proxies /api here.

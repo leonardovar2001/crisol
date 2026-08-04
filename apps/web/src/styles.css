@@ -515,3 +515,144 @@ textarea:focus-visible {
   width: 100%;
   margin-bottom: 0.5rem;
 }
+
+/* ── En vivo ─────────────────────────────────────────────────────────────── */
+
+.muted {
+  color: var(--text-dim);
+  font-size: 0.875rem;
+}
+
+.clock {
+  font-variant-numeric: tabular-nums;
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: var(--accent);
+}
+
+.clock-lg {
+  font-size: 2.5rem;
+}
+
+.code {
+  font-family: ui-monospace, monospace;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.code-lg {
+  font-size: 2rem;
+  margin: 0 0 0.5rem;
+}
+
+.play-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.play-head h1 {
+  margin: 0;
+  font-size: clamp(1.375rem, 5vw, 1.875rem);
+}
+
+.content-block {
+  margin: 0 0 1.25rem;
+}
+
+.content-block img,
+.content-block video {
+  display: block;
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.content-block audio {
+  width: 100%;
+}
+
+.content-block p {
+  margin: 0.625rem 0 0;
+  color: var(--text-muted);
+}
+
+.options {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.option {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+button.option:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.option strong {
+  flex: 1;
+  font-weight: 500;
+}
+
+.option span {
+  color: var(--text-dim);
+  font-size: 0.875rem;
+}
+
+.option.is-mine {
+  border-color: var(--accent);
+  background: var(--bg-raised);
+}
+
+.option.is-winner {
+  border-color: var(--accent-strong);
+  border-width: 2px;
+}
+
+.tally {
+  font-variant-numeric: tabular-nums;
+}
+
+.cue {
+  margin: 0.75rem 0 1.25rem;
+  padding: 0.75rem 1rem;
+  border-left: 3px solid var(--accent-strong);
+  background: var(--bg-sunken);
+}
+
+.cue p {
+  margin: 0.25rem 0 0;
+}
+
+.controls {
+  margin: 1rem 0 1.5rem;
+}
+
+.plain {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plain li {
+  padding: 0.25rem 0;
+}
