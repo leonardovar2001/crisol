@@ -237,6 +237,10 @@ export function applyEvent(
 
     case 'timer_adjusted':
       next.remainingSeconds = event.remainingSeconds;
+      // The clock has to restart from now. Without this the clients keep
+      // measuring elapsed time from the old start, so adding two minutes to a
+      // phase that has been running for five gives back nothing.
+      if (next.status === 'live') next.runningSince = event.at;
       break;
 
     case 'participant_joined':

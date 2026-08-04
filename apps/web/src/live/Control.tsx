@@ -43,7 +43,11 @@ export function Control() {
             {view.participants === 1 ? 'persona' : 'personas'}
           </p>
         </div>
-        {remaining !== null && <span className="clock clock-lg">{formatClock(remaining)}</span>}
+        {remaining !== null && (
+          <span className={`clock clock-lg ${remaining === 0 ? 'is-out' : ''}`}>
+            {remaining === 0 ? 'Se acabó' : formatClock(remaining)}
+          </span>
+        )}
       </header>
 
       {!connected && <p className="alert">Se cortó la conexión. Reintentando…</p>}
@@ -99,6 +103,19 @@ export function Control() {
               <button type="button" className="btn" onClick={() => send('pause')}>
                 Pausar
               </button>
+            )}
+            {view.remainingSeconds !== null && view.status !== 'draft' && view.status !== 'ended' && (
+              <>
+                <button type="button" className="btn btn-tiny" onClick={() => send('timer', { deltaSeconds: 60 })}>
+                  +1 min
+                </button>
+                <button type="button" className="btn btn-tiny" onClick={() => send('timer', { deltaSeconds: 300 })}>
+                  +5 min
+                </button>
+                <button type="button" className="btn btn-tiny" onClick={() => send('timer', { deltaSeconds: -60 })}>
+                  −1 min
+                </button>
+              </>
             )}
             {view.status === 'paused' && (
               <button

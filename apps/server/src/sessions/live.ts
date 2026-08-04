@@ -277,6 +277,33 @@ export function registerLive(app: FastifyInstance, sql: Sql, _config: Config) {
         await broadcast(sessionId);
       });
 
+      /**
+       * Adds or removes time. The client sends a delta and the server works out
+       * what is actually left right now — the browser only has an interpolated
+       * value, and trusting it would let rounding drift into the log.
+       */
+      on('timer', async ({ deltaSeconds }: { deltaSeconds: number }) => {
+        if (!requireFacilitator()) return;
+        if (!Number.isFinite(deltaSeconds)) return;
+
+        const loaded = await currentState(sql, sessionId);
+        if (!loaded || loaded.state.remainingSeconds === null) {
+          return socket.emit('denied', 'Esta fase no tiene reloj');
+        }
+
+        const { remainingSeconds, runningSince, status } = loaded.state;
+        const elapsed =
+          status === 'live' && runningSince ? (Date.now() - Date.parse(runningSince)) / 1000 : 0;
+        const left = Math.max(0, Math.round(remainingSeconds - elapsed));
+
+        await append(sql, sessionId, {
+          kind: 'timer_adjusted',
+          actor,
+          remainingSeconds: Math.max(0, Math.min(24 * 60 * 60, left + Math.round(deltaSeconds))),
+        });
+        await broadcast(sessionId);
+      });
+
       on('pause', async () => {
         if (!requireFacilitator()) return;
         await append(sql, sessionId, { kind: 'session_paused', actor });

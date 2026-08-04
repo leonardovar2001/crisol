@@ -170,6 +170,31 @@ describe('untimed phases', () => {
   });
 });
 
+describe('adjusting the clock', () => {
+  it('restarts the countdown from the moment it was adjusted', () => {
+    const events = [
+      ev({ kind: 'session_started', phaseId: 'p1' }),
+      ev({ kind: 'phase_started', phaseId: 'p1', durationSeconds: 600 }),
+      ev({ kind: 'timer_adjusted', remainingSeconds: 900 }),
+    ];
+    const state = deriveState(scenario, events);
+    expect(state.remainingSeconds).toBe(900);
+    // Otherwise the clients would subtract the time already spent in the phase
+    // from the new value and the extra minutes would vanish on arrival.
+    expect(state.runningSince).toBe(events[2]?.at);
+  });
+
+  it('leaves a paused session paused', () => {
+    const state = deriveState(scenario, [
+      ev({ kind: 'phase_started', phaseId: 'p1', durationSeconds: 600 }),
+      ev({ kind: 'session_paused' }),
+      ev({ kind: 'timer_adjusted', remainingSeconds: 300 }),
+    ]);
+    expect(state.remainingSeconds).toBe(300);
+    expect(state.runningSince).toBeNull();
+  });
+});
+
 describe('facilitator override', () => {
   it('records what the table would have chosen', () => {
     const state = deriveState(scenario, [

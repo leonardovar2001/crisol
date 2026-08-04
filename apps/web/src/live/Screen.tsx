@@ -49,7 +49,11 @@ export function Screen() {
           </p>
           <h1>{view.phase.title}</h1>
         </div>
-        {remaining !== null && <span className="screen-clock">{formatClock(remaining)}</span>}
+        {remaining !== null && (
+          <span className={`screen-clock ${remaining === 0 ? 'is-out' : ''}`}>
+            {remaining === 0 ? 'Se acabó el tiempo' : formatClock(remaining)}
+          </span>
+        )}
       </header>
 
       {view.status === 'paused' && <p className="screen-badge">En pausa</p>}

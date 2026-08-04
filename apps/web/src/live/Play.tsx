@@ -47,7 +47,11 @@ export function Play() {
             <h1>{view.status === 'ended' ? 'Terminó el ejercicio' : 'Esperando que empiece'}</h1>
           )}
         </div>
-        {remaining !== null && <span className="clock">{formatClock(remaining)}</span>}
+        {remaining !== null && (
+          <span className={`clock ${remaining === 0 ? 'is-out' : ''}`}>
+            {remaining === 0 ? 'Se acabó' : formatClock(remaining)}
+          </span>
+        )}
       </header>
 
       {!connected && <p className="alert">Se cortó la conexión. Reintentando…</p>}

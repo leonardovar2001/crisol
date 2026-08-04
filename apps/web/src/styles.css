@@ -930,3 +930,14 @@ button.option:disabled {
   background: var(--bg-sunken);
   color: var(--text-dim);
 }
+
+/* Un reloj en cero tiene que decir que se acabó, no quedarse quieto pareciendo roto. */
+.clock.is-out,
+.screen-clock.is-out {
+  color: var(--danger);
+  font-size: 1.125rem;
+}
+
+.screen-clock.is-out {
+  font-size: clamp(1.125rem, 2.5vw, 2rem);
+}
