@@ -66,23 +66,35 @@ export function registerLive(app: FastifyInstance, sql: Sql, _config: Config) {
       const { sessionId, participantId, rejoinToken } = socket.handshake.query as Record<string, string>;
       if (!sessionId) return socket.disconnect(true);
 
-      // Facilitator sockets are authenticated by the same cookie as the API.
-      const cookies = socket.handshake.headers.cookie ?? '';
-      const token = cookies
-        .split(';')
-        .map((part) => part.trim().split('='))
-        .find(([name]) => name === COOKIE)?.[1];
-
       let identity: Identity = { sessionId };
 
-      if (token) {
-        const [row] = await sql<{ userId: string }[]>`
-          select user_id as "userId" from auth_sessions
-          where token = ${decodeURIComponent(token)} and expires_at > now()
-        `;
-        if (row) {
-          identity = { sessionId, userId: row.userId };
-          if (socket.handshake.query.screen === '1') identity.screen = true;
+      /**
+       * Explicit participant credentials beat the session cookie.
+       *
+       * Whoever runs the exercise is signed in on the same browser they use to
+       * check what a participant sees. If the ambient cookie won, that tab would
+       * get the facilitator's unfiltered view — every role's private material on
+       * screen — and its votes would be silently dropped for having no
+       * participant behind them. Asking to be a participant makes you one.
+       */
+      const asksToBeParticipant = Boolean(participantId || rejoinToken);
+
+      if (!asksToBeParticipant) {
+        const cookies = socket.handshake.headers.cookie ?? '';
+        const token = cookies
+          .split(';')
+          .map((part) => part.trim().split('='))
+          .find(([name]) => name === COOKIE)?.[1];
+
+        if (token) {
+          const [row] = await sql<{ userId: string }[]>`
+            select user_id as "userId" from auth_sessions
+            where token = ${decodeURIComponent(token)} and expires_at > now()
+          `;
+          if (row) {
+            identity = { sessionId, userId: row.userId };
+            if (socket.handshake.query.screen === '1') identity.screen = true;
+          }
         }
       }
 

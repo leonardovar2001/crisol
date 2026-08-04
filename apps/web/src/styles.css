@@ -913,3 +913,20 @@ button.option:disabled {
 .screen .theme-toggle:focus-within {
   opacity: 1;
 }
+
+.waiting {
+  margin: 0 0 0.75rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: 8px;
+  background: var(--bg-sunken);
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+}
+
+/* Un botón deshabilitado tiene que verse deshabilitado, no roto. */
+button.option:disabled {
+  opacity: 1;
+  border-style: dashed;
+  background: var(--bg-sunken);
+  color: var(--text-dim);
+}

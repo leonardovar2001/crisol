@@ -72,6 +72,12 @@ export function Play() {
           <h2>{view.decision.prompt}</h2>
           {denied && <p className="alert">{denied}</p>}
 
+          {/* Arriba de las opciones a propósito: si está abajo, en un teléfono
+              queda fuera de pantalla y el botón deshabilitado parece roto. */}
+          {!view.decision.answersOpen && !view.results && (
+            <p className="waiting">Todavía no se puede votar. Esperá a que abran la votación.</p>
+          )}
+
           <ul className="options">
             {view.decision.options.map((option) => {
               const mine = view.decision?.myVote === option.id;
@@ -95,8 +101,8 @@ export function Play() {
             })}
           </ul>
 
-          {!view.decision.answersOpen && !view.results && (
-            <p className="hint">Las respuestas todavía no están abiertas.</p>
+          {view.decision.answersOpen && view.decision.myVote && (
+            <p className="waiting">Voto registrado. Podés cambiarlo mientras siga abierta.</p>
           )}
           {view.results?.byFacilitator && (
             <p className="note">Esta decisión la tomó quien conduce, no salió de la votación.</p>
