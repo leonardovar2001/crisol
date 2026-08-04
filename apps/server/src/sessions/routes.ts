@@ -3,7 +3,8 @@ import { z } from 'zod';
 import type { Sql } from '../db/client.js';
 import { newId, newToken } from '../ids.js';
 import { requireUser } from '../auth/routes.js';
-import { createSession, findByJoinCode, loadSession } from './service.js';
+import { createSession, findByJoinCode, loadEvents, loadSession, roster } from './service.js';
+import { buildReport } from './report.js';
 
 const joinBody = z.object({
   joinCode: z.string().regex(/^\d{6}$/),
@@ -56,6 +57,16 @@ export function registerSessions(app: FastifyInstance, sql: Sql) {
         accessCode: codes.find((c) => c.roleId === role.id)?.accessCode ?? null,
       })),
     };
+  });
+
+  app.get('/api/sessions/:id/report', async (request, reply) => {
+    if (!(await requireUser(request, reply))) return;
+    const { id } = request.params as { id: string };
+
+    const session = await loadSession(sql, id);
+    if (!session) return reply.code(404).send({ error: 'No existe esa sesión' });
+
+    return buildReport(session.document, await loadEvents(sql, id), await roster(sql, id));
   });
 
   /** Anonymous entry. No account, no password — a room code and a name. */

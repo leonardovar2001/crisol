@@ -6,6 +6,7 @@ import { Appearance } from './editor/Appearance.js';
 import { Control } from './live/Control.js';
 import { Join } from './live/Join.js';
 import { Play } from './live/Play.js';
+import { Report } from './live/Report.js';
 import { Screen } from './live/Screen.js';
 import { Sessions } from './live/Sessions.js';
 import { ThemeToggle } from './components/ThemeToggle.js';
@@ -122,7 +123,14 @@ export function App() {
         />
         <Route path="/join" element={<Join />} />
         <Route path="/play/:sessionId" element={<Play />} />
-        <Route path="/report/:sessionId" element={<Placeholder title="Reporte" note="Qué pasó, qué se votó, exportable." />} />
+        <Route
+          path="/report/:sessionId"
+          element={
+            <RequireUser>
+              <Report />
+            </RequireUser>
+          }
+        />
           <Route path="*" element={<Placeholder title="No encontrado" note="Esa ruta no existe." />} />
         </Routes>
       </SessionProvider>

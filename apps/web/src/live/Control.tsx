@@ -193,9 +193,17 @@ export function Control() {
         </aside>
       </div>
 
-      <Link className="back" to="/sessions">
-        ← Sesiones
-      </Link>
+      <div className="row">
+        <Link className="back" to="/sessions">
+          ← Sesiones
+        </Link>
+        <Link className="back" to={`/screen/${sessionId}`} target="_blank" rel="noreferrer">
+          Abrir pantalla de sala ↗
+        </Link>
+        <Link className="back" to={`/report/${sessionId}`}>
+          Ver reporte
+        </Link>
+      </div>
     </main>
   );
 }

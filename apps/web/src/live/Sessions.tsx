@@ -87,6 +87,9 @@ export function Sessions() {
                   {session.participants === '1' ? 'persona' : 'personas'}
                 </span>
               </Link>
+              <Link className="btn" to={`/report/${session.id}`}>
+                Reporte
+              </Link>
             </li>
           ))}
         </ul>

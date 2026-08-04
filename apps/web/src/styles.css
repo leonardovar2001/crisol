@@ -941,3 +941,121 @@ button.option:disabled {
 .screen-clock.is-out {
   font-size: clamp(1.125rem, 2.5vw, 2rem);
 }
+
+/* ── Reporte ─────────────────────────────────────────────────────────────── */
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: 0.75rem;
+  margin: 0 0 2rem;
+}
+
+.tile {
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+}
+
+.tile span {
+  display: block;
+  font-size: 1.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
+.tile small {
+  color: var(--text-dim);
+  font-size: 0.8125rem;
+}
+
+.decision-report {
+  margin-bottom: 1rem;
+}
+
+.decision-report h3 {
+  margin: 0.125rem 0 0.875rem;
+  font-size: 1.0625rem;
+}
+
+.decision-report .option {
+  display: grid;
+  grid-template-columns: minmax(6rem, 1fr) 2fr auto;
+  cursor: default;
+}
+
+.report-table {
+  width: 100%;
+  margin: 0 0 1.5rem;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+.report-table th {
+  padding: 0.375rem 0.5rem 0.375rem 0;
+  border-bottom: 1px solid var(--border-strong);
+  color: var(--text-dim);
+  font-weight: 600;
+  text-align: left;
+}
+
+.report-table td {
+  padding: 0.4375rem 0.5rem 0.4375rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.report-table td.over {
+  color: var(--danger);
+}
+
+.timeline {
+  margin: 0 0 1.5rem;
+  padding-left: 1.125rem;
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+}
+
+.timeline li {
+  padding: 0.1875rem 0;
+}
+
+.only-print {
+  display: none;
+}
+
+@media print {
+  /* El reporte se lleva impreso al debrief. */
+  body {
+    background: #fff;
+    background-image: none;
+    color: #000;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .only-print {
+    display: block;
+  }
+
+  .panel,
+  .tile,
+  .note {
+    border: 1px solid #999;
+    background: none;
+  }
+
+  .tile span,
+  .decision-report h3,
+  h1,
+  h2 {
+    color: #000;
+  }
+
+  .option.is-winner {
+    border-width: 2px;
+    border-color: #000;
+  }
+}
