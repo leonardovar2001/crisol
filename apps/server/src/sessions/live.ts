@@ -5,6 +5,7 @@ import { nextPhaseId } from '@crisol/engine';
 import type { Config } from '../config.js';
 import type { Sql } from '../db/client.js';
 import { COOKIE } from '../auth/routes.js';
+import { newId } from '../ids.js';
 import { append, controlView, currentState, participantView, roster } from './service.js';
 
 interface Identity {
@@ -212,7 +213,7 @@ export function registerLive(app: FastifyInstance, sql: Sql, _config: Config) {
        * choosing against the vote, which is recorded as such — the report has to
        * be able to say the table did not decide this one.
        */
-      on('resolve', async ({ optionId }: { optionId?: string } = {}) => {
+      on('resolve', async ({ optionId, reason }: { optionId?: string; reason?: string } = {}) => {
         if (!requireFacilitator()) return;
         const loaded = await phaseNow();
         const decision = loaded?.phase?.decision;
@@ -221,6 +222,7 @@ export function registerLive(app: FastifyInstance, sql: Sql, _config: Config) {
         const outcome = countVotes(decision, loaded.state.votes[decision.id] ?? {});
 
         if (optionId && optionId !== outcome.winnerId) {
+          const trimmed = reason?.trim();
           await append(sql, sessionId, {
             kind: 'facilitator_override',
             actor,
@@ -228,6 +230,7 @@ export function registerLive(app: FastifyInstance, sql: Sql, _config: Config) {
             optionId,
             wouldHaveWonOptionId: outcome.winnerId,
             tally: outcome.tally,
+            ...(trimmed ? { reason: trimmed.slice(0, 500) } : {}),
           });
         } else {
           const chosen = optionId ?? outcome.winnerId;
@@ -301,6 +304,35 @@ export function registerLive(app: FastifyInstance, sql: Sql, _config: Config) {
           actor,
           remainingSeconds: Math.max(0, Math.min(24 * 60 * 60, left + Math.round(deltaSeconds))),
         });
+        await broadcast(sessionId);
+      });
+
+      /**
+       * A note, tied to whatever phase is running. Works after the exercise has
+       * ended too — that is when the debrief happens and half the useful
+       * observations show up.
+       */
+      on('note', async ({ body, decisionId }: { body: string; decisionId?: string | null }) => {
+        if (!requireFacilitator()) return;
+        const trimmed = (body ?? '').trim();
+        if (!trimmed) return;
+
+        const loaded = await currentState(sql, sessionId);
+        await append(sql, sessionId, {
+          kind: 'note_added',
+          actor,
+          noteId: newId('nota'),
+          phaseId: loaded?.state.currentPhaseId ?? null,
+          decisionId: decisionId ?? null,
+          body: trimmed.slice(0, 4000),
+        });
+        await broadcast(sessionId);
+      });
+
+      on('note_remove', async ({ noteId }: { noteId: string }) => {
+        if (!requireFacilitator()) return;
+        if (!noteId) return;
+        await append(sql, sessionId, { kind: 'note_removed', actor, noteId });
         await broadcast(sessionId);
       });
 

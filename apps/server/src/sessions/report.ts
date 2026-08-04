@@ -17,6 +17,10 @@ export interface DecisionReport {
   resolvedBy: 'vote' | 'tie_break' | 'override' | 'unresolved';
   /** Only on an override: what the table had actually chosen. */
   wouldHaveWon: string | null;
+  /** Why the facilitator went against the vote. */
+  reason: string | null;
+  /** Notes written about this decision specifically. */
+  notes: { id: string; body: string; at: string }[];
   votesCast: number;
   peoplePresent: number;
   /** Seconds between opening the answers and closing the decision. */
@@ -30,6 +34,8 @@ export interface PhaseReport {
   plannedSeconds: number | null;
   actualSeconds: number | null;
   startedAt: string;
+  /** Notes about this phase that were not about a particular decision. */
+  notes: { id: string; body: string; at: string }[];
 }
 
 export interface SessionReport {
@@ -45,6 +51,8 @@ export interface SessionReport {
   /** Phases the exercise never reached, because the table went another way. */
   skippedPhases: string[];
   facilitatorOverrides: number;
+  /** Written after the exercise ended — the debrief itself. */
+  closingNotes: { id: string; body: string; at: string }[];
   timeline: { at: string; label: string }[];
 }
 
@@ -94,6 +102,9 @@ export function buildReport(
         ? Math.round((Date.parse(end.at) - Date.parse(event.at)) / 1000)
         : null,
       startedAt: event.at,
+      notes: state.notes
+        .filter((n) => n.phaseId === phase.id && n.decisionId === null)
+        .map((n) => ({ id: n.id, body: n.body, at: n.at })),
     });
   }
 
@@ -125,6 +136,10 @@ export function buildReport(
           won: resolved?.optionId === option.id,
         })),
       resolvedBy: resolved?.resolvedBy ?? 'unresolved',
+      reason: resolved?.reason ?? null,
+      notes: state.notes
+        .filter((n) => n.decisionId === decision.id)
+        .map((n) => ({ id: n.id, body: n.body, at: n.at })),
       wouldHaveWon: resolved?.wouldHaveWonOptionId
         ? text(
             decision.options.find((o) => o.id === resolved.wouldHaveWonOptionId)?.label,
@@ -157,6 +172,9 @@ export function buildReport(
       .filter((phase) => !visited.has(phase.id))
       .map((phase) => text(phase.title, locale)),
     facilitatorOverrides: events.filter((e) => e.kind === 'facilitator_override').length,
+    closingNotes: state.notes
+      .filter((n) => n.phaseId === null)
+      .map((n) => ({ id: n.id, body: n.body, at: n.at })),
     timeline: events.flatMap((event) => {
       if (event.kind === 'phase_started') {
         const phase = phaseById.get(event.phaseId);

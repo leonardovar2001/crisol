@@ -1059,3 +1059,41 @@ button.option:disabled {
     border-color: #000;
   }
 }
+
+/* ── Notas ───────────────────────────────────────────────────────────────── */
+
+.notes {
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.notes li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  border-left: 3px solid var(--border-strong);
+  border-radius: 0 8px 8px 0;
+  background: var(--bg-sunken);
+}
+
+.notes li p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+  white-space: pre-wrap;
+}
+
+.override-box {
+  margin: 0.75rem 0;
+  border: 1px solid var(--danger-border);
+}
+
+.override-box p {
+  margin: 0 0 0.75rem;
+  color: var(--text-muted);
+}

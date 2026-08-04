@@ -170,6 +170,71 @@ describe('untimed phases', () => {
   });
 });
 
+describe('facilitator notes', () => {
+  it('keeps them in the order they were written, tied to their phase', () => {
+    const state = deriveState(scenario, [
+      ev({ kind: 'phase_started', phaseId: 'p1', durationSeconds: 600 }),
+      ev({ kind: 'note_added', noteId: 'n1', phaseId: 'p1', decisionId: 'd1', body: 'Querían un cuarto camino' }),
+      ev({ kind: 'note_added', noteId: 'n2', phaseId: 'p1', decisionId: null, body: 'Nadie mencionó al regulador' }),
+    ]);
+    expect(state.notes.map((n) => n.body)).toEqual([
+      'Querían un cuarto camino',
+      'Nadie mencionó al regulador',
+    ]);
+    expect(state.notes[0]?.decisionId).toBe('d1');
+  });
+
+  it('lets one be removed without touching the rest', () => {
+    const state = deriveState(scenario, [
+      ev({ kind: 'note_added', noteId: 'n1', phaseId: 'p1', decisionId: null, body: 'primera' }),
+      ev({ kind: 'note_added', noteId: 'n2', phaseId: 'p1', decisionId: null, body: 'segunda' }),
+      ev({ kind: 'note_removed', noteId: 'n1' }),
+    ]);
+    expect(state.notes.map((n) => n.body)).toEqual(['segunda']);
+  });
+
+  it('accepts a note with no phase, written after the exercise ended', () => {
+    const state = deriveState(scenario, [
+      ev({ kind: 'session_ended' }),
+      ev({ kind: 'note_added', noteId: 'n1', phaseId: null, decisionId: null, body: 'En el debrief salió que…' }),
+    ]);
+    expect(state.notes).toHaveLength(1);
+    expect(state.notes[0]?.phaseId).toBeNull();
+  });
+});
+
+describe('why the facilitator overrode', () => {
+  it('records the reason alongside what the table had chosen', () => {
+    const state = deriveState(scenario, [
+      ev({ kind: 'phase_started', phaseId: 'p1', durationSeconds: 600 }),
+      ev({
+        kind: 'facilitator_override',
+        decisionId: 'd1',
+        optionId: 'oB',
+        wouldHaveWonOptionId: 'oA',
+        tally: { oA: 4, oB: 1 },
+        reason: 'La discusión mostró que no habían leído el informe',
+      }),
+    ]);
+    const resolved = state.resolved.d1!;
+    expect(resolved.reason).toBe('La discusión mostró que no habían leído el informe');
+    expect(resolved.wouldHaveWonOptionId).toBe('oA');
+  });
+
+  it('deja la razón en null cuando no se dio ninguna', () => {
+    const state = deriveState(scenario, [
+      ev({
+        kind: 'decision_resolved',
+        decisionId: 'd1',
+        optionId: 'oA',
+        tally: { oA: 2, oB: 1 },
+        resolvedBy: 'vote',
+      }),
+    ]);
+    expect(state.resolved.d1?.reason).toBeNull();
+  });
+});
+
 describe('adjusting the clock', () => {
   it('restarts the countdown from the moment it was adjusted', () => {
     const events = [

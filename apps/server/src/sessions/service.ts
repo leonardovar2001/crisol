@@ -267,6 +267,8 @@ export function participantView(
 export interface ControlView extends ParticipantView {
   /** The facilitator sees the tally at all times, revealed or not. */
   liveTally: Record<string, number> | null;
+  /** Private notes. Deliberately absent from `ParticipantView`. */
+  notes: { id: string; phaseId: string | null; decisionId: string | null; body: string; at: string }[];
   presenterCue: string;
   roster: { id: string; displayName: string; roleName: string }[];
   nextPhaseTitle: string | null;
@@ -303,6 +305,7 @@ export function controlView(
     ...base,
     contents,
     liveTally: decision ? countVotes(decision, state.votes[decision.id] ?? {}).tally : null,
+    notes: state.notes,
     presenterCue: phase ? text(phase.presenterCue, locale) : '',
     roster: roster.map((p) => ({
       id: p.id,

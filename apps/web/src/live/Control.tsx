@@ -15,6 +15,9 @@ export function Control() {
   const [info, setInfo] = useState<Info | null>(null);
   const { view, connected, denied, send } = useLive({ sessionId });
   const remaining = useCountdown(view);
+  const [overriding, setOverriding] = useState<string | null>(null);
+  const [reason, setReason] = useState('');
+  const [note, setNote] = useState('');
 
   useEffect(() => {
     void fetch(`/api/sessions/${sessionId}`)
@@ -141,7 +144,7 @@ export function Control() {
                         <button
                           type="button"
                           className="btn btn-tiny"
-                          onClick={() => send('resolve', { optionId: option.id })}
+                          onClick={() => setOverriding(option.id)}
                         >
                           Elegir esta
                         </button>
@@ -150,6 +153,40 @@ export function Control() {
                   </li>
                 ))}
               </ul>
+              {overriding && (
+                <div className="panel override-box">
+                  <p>
+                    Vas a elegir «{decision.options.find((o) => o.id === overriding)?.label}». Va a
+                    quedar registrado que no salió de la votación.
+                  </p>
+                  <label className="field">
+                    <span>Por qué (opcional, pero el reporte lo agradece)</span>
+                    <textarea
+                      rows={2}
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                      placeholder="La discusión mostró que…"
+                    />
+                  </label>
+                  <div className="row">
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={() => {
+                        send('resolve', { optionId: overriding, reason });
+                        setOverriding(null);
+                        setReason('');
+                      }}
+                    >
+                      Confirmar
+                    </button>
+                    <button type="button" className="btn" onClick={() => setOverriding(null)}>
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <p className="hint">
                 El recuento lo ves siempre; los participantes sólo cuando lo mostrás. Si elegís una
                 opción a mano queda registrado que no salió de la votación.
@@ -177,6 +214,59 @@ export function Control() {
                   )}
                 </li>
               ))}
+            </ul>
+          </section>
+
+          <section className="panel">
+            <h2>Notas</h2>
+            <p className="hint">
+              Privadas. No las ve nadie más. Sirven para lo que salió en la conversación y no está
+              en ninguna opción.
+            </p>
+            <textarea
+              rows={3}
+              value={note}
+              placeholder="Querían un camino que no estaba entre las opciones…"
+              onChange={(e) => setNote(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                  send('note', { body: note, decisionId: decision?.id ?? null });
+                  setNote('');
+                }
+              }}
+            />
+            <div className="row">
+              <button
+                type="button"
+                className="btn"
+                disabled={!note.trim()}
+                onClick={() => {
+                  send('note', { body: note, decisionId: decision?.id ?? null });
+                  setNote('');
+                }}
+              >
+                Guardar nota
+              </button>
+              <span className="muted">
+                {decision ? 'queda ligada a esta decisión' : 'queda ligada a esta fase'}
+              </span>
+            </div>
+
+            <ul className="notes">
+              {(view.notes ?? [])
+                .filter((n) => n.phaseId === view.phase?.id)
+                .map((n) => (
+                  <li key={n.id}>
+                    <p>{n.body}</p>
+                    <button
+                      type="button"
+                      className="btn btn-danger btn-tiny"
+                      onClick={() => send('note_remove', { noteId: n.id })}
+                    >
+                      Quitar
+                    </button>
+                  </li>
+                ))}
             </ul>
           </section>
 

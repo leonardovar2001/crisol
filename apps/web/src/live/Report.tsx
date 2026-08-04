@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 interface Report {
@@ -15,6 +15,7 @@ interface Report {
     plannedSeconds: number | null;
     actualSeconds: number | null;
     startedAt: string;
+    notes: Note[];
   }[];
   decisions: {
     phaseTitle: string;
@@ -22,13 +23,22 @@ interface Report {
     options: { id: string; label: string; votes: number; won: boolean }[];
     resolvedBy: 'vote' | 'tie_break' | 'override' | 'unresolved';
     wouldHaveWon: string | null;
+    reason: string | null;
+    notes: Note[];
     votesCast: number;
     peoplePresent: number;
     deliberationSeconds: number | null;
   }[];
   skippedPhases: string[];
   facilitatorOverrides: number;
+  closingNotes: Note[];
   timeline: { at: string; label: string }[];
+}
+
+interface Note {
+  id: string;
+  body: string;
+  at: string;
 }
 
 function duration(seconds: number | null): string {
@@ -50,13 +60,37 @@ export function Report() {
   const { sessionId = '' } = useParams();
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [draft, setDraft] = useState('');
+
+  const load = useCallback(
+    () =>
+      fetch(`/api/sessions/${sessionId}/report`)
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error('No se pudo cargar'))))
+        .then(setReport)
+        .catch((e: Error) => setError(e.message)),
+    [sessionId],
+  );
 
   useEffect(() => {
-    void fetch(`/api/sessions/${sessionId}/report`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('No se pudo cargar'))))
-      .then(setReport)
-      .catch((e) => setError(e.message));
-  }, [sessionId]);
+    void load();
+  }, [load]);
+
+  const addNote = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!draft.trim()) return;
+    await fetch(`/api/sessions/${sessionId}/notes`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ body: draft }),
+    });
+    setDraft('');
+    await load();
+  };
+
+  const removeNote = async (noteId: string) => {
+    await fetch(`/api/sessions/${sessionId}/notes/${noteId}`, { method: 'DELETE' });
+    await load();
+  };
 
   if (error) {
     return (
@@ -165,7 +199,18 @@ export function Report() {
                 <p className="note">
                   Esta decisión no salió de la votación.
                   {decision.wouldHaveWon && <> La mesa había elegido «{decision.wouldHaveWon}».</>}
+                  {decision.reason && <> Motivo: {decision.reason}</>}
                 </p>
+              )}
+
+              {decision.notes.length > 0 && (
+                <ul className="notes">
+                  {decision.notes.map((n) => (
+                    <li key={n.id}>
+                      <p>{n.body}</p>
+                    </li>
+                  ))}
+                </ul>
               )}
             </section>
           );
@@ -208,6 +253,59 @@ export function Report() {
           dejaron de lado.
         </p>
       )}
+
+      {report.path.some((p) => p.notes.length > 0) && (
+        <>
+          <h2>Notas durante el ejercicio</h2>
+          {report.path
+            .filter((p) => p.notes.length > 0)
+            .map((phase, i) => (
+              <section key={i} className="panel">
+                <p className="muted">{phase.title}</p>
+                <ul className="notes">
+                  {phase.notes.map((n) => (
+                    <li key={n.id}>
+                      <p>{n.body}</p>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+        </>
+      )}
+
+      <h2>Notas del debrief</h2>
+      <p className="hint no-print">
+        Lo que salió al repasar el ejercicio. Se guarda con la sesión, así que sigue acá la próxima
+        vez que abras este reporte.
+      </p>
+      {report.closingNotes.length > 0 && (
+        <ul className="notes">
+          {report.closingNotes.map((n) => (
+            <li key={n.id}>
+              <p>{n.body}</p>
+              <button
+                type="button"
+                className="btn btn-danger btn-tiny no-print"
+                onClick={() => void removeNote(n.id)}
+              >
+                Quitar
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <form className="no-print" onSubmit={addNote}>
+        <textarea
+          rows={3}
+          value={draft}
+          placeholder="Al repasarlo salió que…"
+          onChange={(e) => setDraft(e.target.value)}
+        />
+        <button type="submit" className="btn" disabled={!draft.trim()}>
+          Agregar nota
+        </button>
+      </form>
 
       <h2>Quiénes estuvieron</h2>
       <ul className="plain">

@@ -20,6 +20,7 @@ export interface LiveView {
   participants: number;
   // Only present on the facilitator's view.
   liveTally?: Record<string, number> | null;
+  notes?: { id: string; phaseId: string | null; decisionId: string | null; body: string; at: string }[];
   presenterCue?: string;
   roster?: { id: string; displayName: string; roleName: string }[];
   nextPhaseTitle?: string | null;

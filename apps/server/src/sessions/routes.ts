@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { Sql } from '../db/client.js';
 import { newId, newToken } from '../ids.js';
 import { requireUser } from '../auth/routes.js';
-import { createSession, findByJoinCode, loadEvents, loadSession, roster } from './service.js';
+import { append, createSession, findByJoinCode, loadEvents, loadSession, roster } from './service.js';
 import { buildReport } from './report.js';
 
 const joinBody = z.object({
@@ -67,6 +67,47 @@ export function registerSessions(app: FastifyInstance, sql: Sql) {
     if (!session) return reply.code(404).send({ error: 'No existe esa sesión' });
 
     return buildReport(session.document, await loadEvents(sql, id), await roster(sql, id));
+  });
+
+  /**
+   * Notes written from the report, after the exercise.
+   *
+   * The live control adds notes over its socket; this is for the debrief, when
+   * there is no session running to broadcast to.
+   */
+  app.post('/api/sessions/:id/notes', async (request, reply) => {
+    const user = await requireUser(request, reply);
+    if (!user) return;
+    const { id } = request.params as { id: string };
+
+    const parsed = z.object({ body: z.string().trim().min(1).max(4000) }).safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send({ error: 'La nota está vacía' });
+    if (!(await loadSession(sql, id))) return reply.code(404).send({ error: 'No existe esa sesión' });
+
+    const noteId = newId('nota');
+    await append(sql, id, {
+      kind: 'note_added',
+      actor: { kind: 'user', userId: user.id },
+      noteId,
+      phaseId: null,
+      decisionId: null,
+      body: parsed.data.body,
+    });
+    return reply.code(201).send({ noteId });
+  });
+
+  app.delete('/api/sessions/:id/notes/:noteId', async (request, reply) => {
+    const user = await requireUser(request, reply);
+    if (!user) return;
+    const { id, noteId } = request.params as { id: string; noteId: string };
+    if (!(await loadSession(sql, id))) return reply.code(404).send({ error: 'No existe esa sesión' });
+
+    await append(sql, id, {
+      kind: 'note_removed',
+      actor: { kind: 'user', userId: user.id },
+      noteId,
+    });
+    return reply.code(204).send();
   });
 
   /** Anonymous entry. No account, no password — a room code and a name. */

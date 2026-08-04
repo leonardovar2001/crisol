@@ -58,6 +58,27 @@ export const sessionEventSchema = z.discriminatedUnion('kind', [
   }),
 
   /**
+   * A note taken while running the exercise, or afterwards during the debrief.
+   *
+   * This is where the value of a session that nobody wrote down goes to die:
+   * the table argues its way to something better than any of the options, and
+   * ten minutes later nobody remembers it. Notes are private to whoever runs
+   * the exercise — never sent to participants or to the projected screen.
+   */
+  base.extend({
+    kind: z.literal('note_added'),
+    noteId: id,
+    /** `null` for a note written after the exercise ended. */
+    phaseId: id.nullable(),
+    /** Set when the note is about a specific decision. */
+    decisionId: id.nullable(),
+    body: z.string().min(1).max(4000),
+  }),
+
+  /** Notes are never edited in place; removing one is its own fact. */
+  base.extend({ kind: z.literal('note_removed'), noteId: id }),
+
+  /**
    * The facilitator overrode the vote.
    *
    * Recorded separately and on purpose: the report must be able to say "this

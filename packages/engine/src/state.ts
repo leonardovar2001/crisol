@@ -24,6 +24,8 @@ export interface ResolvedDecision {
   resolvedBy: 'vote' | 'tie_break' | 'override';
   /** Only set on an override: what the table had actually chosen. */
   wouldHaveWonOptionId: string | null;
+  /** Why the facilitator went against the vote, if they said. */
+  reason: string | null;
 }
 
 export interface ParticipantState {
@@ -31,6 +33,15 @@ export interface ParticipantState {
   displayName: string;
   roleId: string;
   present: boolean;
+}
+
+/** A facilitator's note. Never part of any participant's view. */
+export interface NoteState {
+  id: string;
+  phaseId: string | null;
+  decisionId: string | null;
+  body: string;
+  at: string;
 }
 
 /** Chart values keyed by chart key, then series name. */
@@ -49,6 +60,8 @@ export interface SessionState {
   /** decisionId -> participantId -> optionId. A participant has at most one live vote. */
   votes: Record<string, Record<string, string>>;
   resolved: Record<string, ResolvedDecision>;
+  /** In the order they were written. */
+  notes: NoteState[];
   charts: ChartState;
   /** Every phase entered, in order. With branching this is not the authored order. */
   path: string[];
@@ -65,6 +78,7 @@ export function initialState(scenario: Scenario): SessionState {
     participants: {},
     votes: {},
     resolved: {},
+    notes: [],
     charts: Object.fromEntries(
       scenario.charts.map((c) => [c.key, structuredClone(c.initialSeries)]),
     ),
@@ -194,6 +208,7 @@ export function applyEvent(
     participants: { ...state.participants },
     votes: { ...state.votes },
     resolved: { ...state.resolved },
+    notes: [...state.notes],
     charts: structuredClone(state.charts),
     path: [...state.path],
   };
@@ -279,6 +294,20 @@ export function applyEvent(
       next.resultsVisible = true;
       break;
 
+    case 'note_added':
+      next.notes.push({
+        id: event.noteId,
+        phaseId: event.phaseId,
+        decisionId: event.decisionId,
+        body: event.body,
+        at: event.at,
+      });
+      break;
+
+    case 'note_removed':
+      next.notes = next.notes.filter((note) => note.id !== event.noteId);
+      break;
+
     case 'decision_resolved':
       next.resolved[event.decisionId] = {
         decisionId: event.decisionId,
@@ -286,6 +315,7 @@ export function applyEvent(
         tally: event.tally,
         resolvedBy: event.resolvedBy,
         wouldHaveWonOptionId: null,
+        reason: null,
       };
       fireEffects(scenario, next.charts, (e) =>
         e.trigger.kind === 'on_option_chosen' && e.trigger.optionId === event.optionId);
@@ -298,6 +328,7 @@ export function applyEvent(
         tally: event.tally,
         resolvedBy: 'override',
         wouldHaveWonOptionId: event.wouldHaveWonOptionId,
+        reason: event.reason ?? null,
       };
       fireEffects(scenario, next.charts, (e) =>
         e.trigger.kind === 'on_option_chosen' && e.trigger.optionId === event.optionId);
