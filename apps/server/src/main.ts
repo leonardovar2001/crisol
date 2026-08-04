@@ -9,6 +9,7 @@ import { bootstrapOwner, registerAuth } from './auth/routes.js';
 import { loadConfig } from './config.js';
 import { connect, waitForDatabase } from './db/client.js';
 import { migrate } from './db/migrate.js';
+import { registerInstance } from './instance/routes.js';
 import { registerMedia } from './media/routes.js';
 import { registerScenarios } from './scenarios/routes.js';
 import { registerLive } from './sessions/live.js';
@@ -45,11 +46,7 @@ app.get('/healthz', async () => {
   return { status: 'ok' };
 });
 
-app.get('/api/instance', async () => ({
-  name: config.INSTANCE_NAME,
-  defaultLocale: config.DEFAULT_LOCALE,
-}));
-
+registerInstance(app, sql, config);
 registerAuth(app, sql, config);
 registerScenarios(app, sql, config);
 registerMedia(app, sql, config);

@@ -4,6 +4,24 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Crisol</title>
+    <script>
+      // Antes de pintar nada: si esperáramos a React, quien eligió modo claro
+      // vería un destello oscuro en cada carga.
+      (function () {
+        try {
+          var stored = localStorage.getItem('crisol.theme');
+          var mode =
+            stored === 'light' || stored === 'dark'
+              ? stored
+              : matchMedia('(prefers-color-scheme: light)').matches
+                ? 'light'
+                : 'dark';
+          document.documentElement.dataset.theme = mode;
+        } catch (e) {
+          document.documentElement.dataset.theme = 'dark';
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

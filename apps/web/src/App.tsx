@@ -2,10 +2,14 @@ import { BrowserRouter, Link, Route, Routes } from 'react-router-dom';
 import { ScenarioEditor } from './editor/ScenarioEditor.js';
 import { ScenarioList } from './editor/ScenarioList.js';
 import { RequireUser, SessionProvider } from './editor/Session.js';
+import { Appearance } from './editor/Appearance.js';
 import { Control } from './live/Control.js';
 import { Join } from './live/Join.js';
 import { Play } from './live/Play.js';
+import { Screen } from './live/Screen.js';
 import { Sessions } from './live/Sessions.js';
+import { ThemeToggle } from './components/ThemeToggle.js';
+import { useInstanceTheme } from './lib/theme.js';
 
 /**
  * Route shell for the surfaces described in docs/01-vision-y-arquitectura.md §6.
@@ -34,7 +38,10 @@ const surfaces = [
 function Home() {
   return (
     <main className="placeholder">
-      <h1>Crisol</h1>
+      <div className="row row-between">
+        <h1>Crisol</h1>
+        <ThemeToggle />
+      </div>
       <p className="lede">Ejercicios por fases con decisiones en grupo. Todavía en construcción.</p>
 
       <ul className="card-list">
@@ -56,6 +63,9 @@ function Home() {
 }
 
 export function App() {
+  // Instance colours are public: the login screen needs them too.
+  useInstanceTheme();
+
   return (
     <BrowserRouter>
       <SessionProvider>
@@ -94,7 +104,22 @@ export function App() {
           }
         />
         <Route path="/presenter/:sessionId" element={<Placeholder title="Presenter" note="Guion de quien conduce." />} />
-        <Route path="/screen/:sessionId" element={<Placeholder title="Pantalla" note="Vista de sala para proyectar." />} />
+        <Route
+          path="/screen/:sessionId"
+          element={
+            <RequireUser>
+              <Screen />
+            </RequireUser>
+          }
+        />
+        <Route
+          path="/apariencia"
+          element={
+            <RequireUser>
+              <Appearance />
+            </RequireUser>
+          }
+        />
         <Route path="/join" element={<Join />} />
         <Route path="/play/:sessionId" element={<Play />} />
         <Route path="/report/:sessionId" element={<Placeholder title="Reporte" note="Qué pasó, qué se votó, exportable." />} />

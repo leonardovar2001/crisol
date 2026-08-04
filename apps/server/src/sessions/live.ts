@@ -13,6 +13,13 @@ interface Identity {
   userId?: string;
   participantId?: string;
   roleId?: string;
+  /**
+   * The projected room view. It authenticates like a facilitator (whoever sets
+   * up the projector is running the exercise) but must never be treated as one:
+   * the whole room is looking at it, so it gets the general role's view and no
+   * presenter cue, roster or live tally.
+   */
+  screen?: boolean;
 }
 
 const identities = new WeakMap<Socket, Identity>();
@@ -34,18 +41,22 @@ export function registerLive(app: FastifyInstance, sql: Sql, _config: Config) {
     const control = controlView(loaded.scenario, loaded.state, people);
     const serverNow = new Date().toISOString();
 
+    const generalRoleId = loaded.scenario.roles.find((role) => role.isGeneral)?.id ?? '';
+
     for (const socket of await io.in(`session:${sessionId}`).fetchSockets()) {
       const identity = identities.get(socket as unknown as Socket);
-      // A participant only ever receives their own role's view.
-      const view = identity?.userId
-        ? control
-        : participantView(
-            loaded.scenario,
-            loaded.state,
-            identity?.roleId ?? '',
-            identity?.participantId ?? null,
-            people.length,
-          );
+      // A participant only ever receives their own role's view; the projected
+      // screen gets the general one.
+      const view =
+        identity?.userId && !identity.screen
+          ? control
+          : participantView(
+              loaded.scenario,
+              loaded.state,
+              identity?.screen ? generalRoleId : (identity?.roleId ?? ''),
+              identity?.participantId ?? null,
+              people.length,
+            );
       socket.emit('state', { ...view, serverNow, runningSince: loaded.state.runningSince });
     }
   };
@@ -69,7 +80,10 @@ export function registerLive(app: FastifyInstance, sql: Sql, _config: Config) {
           select user_id as "userId" from auth_sessions
           where token = ${decodeURIComponent(token)} and expires_at > now()
         `;
-        if (row) identity = { sessionId, userId: row.userId };
+        if (row) {
+          identity = { sessionId, userId: row.userId };
+          if (socket.handshake.query.screen === '1') identity.screen = true;
+        }
       }
 
       if (!identity.userId) {
@@ -91,7 +105,9 @@ export function registerLive(app: FastifyInstance, sql: Sql, _config: Config) {
         : ({ kind: 'participant', participantId: identity.participantId! } as const);
 
       const requireFacilitator = () => {
-        if (identity.userId) return true;
+        // The screen is a mirror, never a control: it must not be able to act
+        // even though it signed in with the same account.
+        if (identity.userId && !identity.screen) return true;
         socket.emit('denied', 'Sólo quien conduce puede hacer eso');
         return false;
       };

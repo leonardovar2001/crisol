@@ -1,44 +1,81 @@
 /*
- * Paleta: celeste medio oscuro y blanco.
+ * Tema.
  *
- * Todo el color sale de estos tokens. Ninguna regla de más abajo escribe un
- * valor literal — cambiar el tema es cambiar este bloque y nada más.
+ * Todo el color sale de DOS variables: --base (el tinte de las superficies) y
+ * --accent. De ahí se derivan los dos modos con color-mix, así que el dueño de
+ * la instancia cambia dos colores y no puede dejar la interfaz rota a medias.
+ *
+ * Ninguna regla de más abajo escribe un color literal. Si necesitás uno nuevo,
+ * agregá un token acá.
  */
 :root {
-  --c-950: #0a2230;
-  --c-900: #0f3040;
-  --c-800: #164152;
-  --c-700: #1e5568;
-  --c-600: #2b7091;
-  --c-400: #4fa8cc;
-  --c-300: #86cbe6;
-  --c-100: #d8ecf5;
-
-  --bg: var(--c-900);
-  --bg-sunken: var(--c-950);
-  --bg-raised: var(--c-800);
-  --border: var(--c-700);
-  --border-strong: var(--c-600);
-
-  --text: #ffffff;
-  --text-muted: var(--c-100);
-  --text-dim: #9dbdcd;
-
-  --accent: var(--c-300);
-  --accent-strong: var(--c-400);
+  /* Valores por defecto. El servidor los pisa con los de la instancia. */
+  --base: #0f3040;
+  --accent-seed: #4fa8cc;
 
   --radius: 10px;
   --measure: 46rem;
+}
+
+/* Modo oscuro: el base es el fondo y todo se aclara desde ahí. */
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: var(--base);
+  --bg-sunken: color-mix(in oklab, var(--base) 82%, black);
+  --bg-raised: color-mix(in oklab, var(--base) 90%, white);
+  --border: color-mix(in oklab, var(--base) 78%, white);
+  --border-strong: color-mix(in oklab, var(--base) 62%, white);
+
+  --text: #ffffff;
+  --text-muted: color-mix(in oklab, var(--base) 18%, white);
+  --text-dim: color-mix(in oklab, var(--base) 42%, white);
+
+  --accent: color-mix(in oklab, var(--accent-seed) 72%, white);
+  --accent-strong: var(--accent-seed);
+  --on-accent: color-mix(in oklab, var(--base) 80%, black);
+
+  --danger: #ffb4a8;
+  --danger-bg: color-mix(in oklab, #7d4a41 30%, var(--bg-sunken));
+  --danger-border: #7d4a41;
+}
+
+/*
+ * Modo claro. Existe sobre todo por la pantalla de sala: un fondo oscuro
+ * proyectado en un aula con luz se lava y deja de leerse desde el fondo.
+ */
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --bg: color-mix(in oklab, var(--base) 5%, white);
+  --bg-sunken: color-mix(in oklab, var(--base) 11%, white);
+  --bg-raised: #ffffff;
+  --border: color-mix(in oklab, var(--base) 22%, white);
+  --border-strong: color-mix(in oklab, var(--base) 40%, white);
+
+  /*
+   * Aclarando, no oscureciendo: en modo claro cada nivel más tenue tiene que
+   * acercarse al fondo. Mezclar con negro invierte la jerarquía y deja el texto
+   * secundario más marcado que el principal.
+   */
+  --text: color-mix(in oklab, var(--base) 92%, black);
+  --text-muted: color-mix(in oklab, var(--base) 88%, white);
+  --text-dim: color-mix(in oklab, var(--base) 70%, white);
+
+  --accent: color-mix(in oklab, var(--accent-seed) 70%, black);
+  --accent-strong: color-mix(in oklab, var(--accent-seed) 55%, black);
+  --on-accent: #ffffff;
+
+  --danger: #9a2f21;
+  --danger-bg: color-mix(in oklab, #9a2f21 8%, white);
+  --danger-border: color-mix(in oklab, #9a2f21 35%, white);
 }
 
 *,
 *::before,
 *::after {
   box-sizing: border-box;
-}
-
-html {
-  color-scheme: dark;
 }
 
 body {
@@ -49,7 +86,7 @@ body {
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   line-height: 1.6;
   /* Un degradado muy leve para que el fondo no sea un bloque plano. */
-  background-image: radial-gradient(120% 80% at 50% 0%, var(--c-800) 0%, var(--bg) 60%);
+  background-image: radial-gradient(120% 80% at 50% 0%, var(--bg-raised) 0%, var(--bg) 60%);
   background-attachment: fixed;
 }
 
@@ -252,7 +289,7 @@ textarea:focus-visible {
 .btn-primary {
   border-color: var(--accent-strong);
   background: var(--accent-strong);
-  color: #06222f;
+  color: var(--on-accent);
   font-weight: 600;
 }
 
@@ -262,11 +299,11 @@ textarea:focus-visible {
 
 .btn-danger {
   border-color: transparent;
-  color: #ffb4a8;
+  color: var(--danger);
 }
 
 .btn-danger:hover:not(:disabled) {
-  border-color: #a05046;
+  border-color: var(--danger-border);
   background: transparent;
 }
 
@@ -377,10 +414,10 @@ textarea:focus-visible {
 .alert {
   margin: 0 0 1.25rem;
   padding: 0.875rem 1.125rem;
-  border: 1px solid #7d4a41;
+  border: 1px solid var(--danger-border);
   border-radius: 10px;
-  background: #2a1f1d;
-  color: #ffd7cf;
+  background: var(--danger-bg);
+  color: var(--danger);
   font-size: 0.9375rem;
 }
 
@@ -494,7 +531,7 @@ textarea:focus-visible {
 }
 
 .save-error {
-  color: #ffb4a8;
+  color: var(--danger);
 }
 
 .media-slot {
@@ -655,4 +692,224 @@ button.option:disabled {
 
 .plain li {
   padding: 0.25rem 0;
+}
+
+/* ── Selector de modo ────────────────────────────────────────────────────── */
+
+.theme-toggle {
+  display: inline-flex;
+  gap: 1px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-sunken);
+}
+
+.theme-toggle button {
+  padding: 0.25rem 0.625rem;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.theme-toggle button.is-active {
+  background: var(--bg-raised);
+  color: var(--text);
+}
+
+.swatch {
+  width: 3rem;
+  height: 2.25rem;
+  padding: 2px;
+  cursor: pointer;
+}
+
+.contrast {
+  width: 100%;
+  margin: 0 0 0.5rem;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.contrast td {
+  padding: 0.375rem 0.5rem 0.375rem 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.contrast td:nth-child(2) {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.contrast td:last-child {
+  color: var(--text-dim);
+  text-align: right;
+}
+
+/* ── Pantalla de sala ────────────────────────────────────────────────────── */
+
+.screen {
+  min-height: 100dvh;
+  padding: clamp(1.5rem, 3vw, 3rem);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 2vw, 2rem);
+}
+
+.screen-center {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.screen-idle {
+  margin: 0;
+  font-size: clamp(1.75rem, 5vw, 3.5rem);
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.screen-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--border);
+}
+
+.screen-head h1 {
+  margin: 0;
+  font-size: clamp(1.75rem, 4.5vw, 3.25rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.screen-step {
+  margin: 0 0 0.25rem;
+  color: var(--text-dim);
+  font-size: clamp(0.875rem, 1.4vw, 1.125rem);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.screen-clock {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(2rem, 6vw, 4.5rem);
+  font-weight: 600;
+  line-height: 1;
+  color: var(--accent);
+}
+
+.screen-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 2vw, 2rem);
+}
+
+.screen-content p {
+  margin: 0.5rem 0 0;
+  font-size: clamp(1.125rem, 2.1vw, 1.875rem);
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.screen-content img,
+.screen-content video {
+  display: block;
+  max-width: 100%;
+  max-height: 45dvh;
+  margin: 0 auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.screen-decision h2 {
+  margin: 0 0 1rem;
+  font-size: clamp(1.25rem, 2.6vw, 2.25rem);
+}
+
+.screen-decision ul {
+  display: grid;
+  gap: 0.625rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.screen-decision li {
+  display: grid;
+  grid-template-columns: minmax(8rem, 1fr) 3fr auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  font-size: clamp(1rem, 1.9vw, 1.625rem);
+}
+
+.screen-decision li.is-winner {
+  border-color: var(--accent-strong);
+}
+
+.screen-option-label {
+  font-weight: 500;
+}
+
+.screen-bar {
+  display: block;
+  height: 0.75rem;
+  border-radius: 999px;
+  background: var(--bg-sunken);
+  overflow: hidden;
+}
+
+.screen-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent-strong);
+  transition: width 400ms ease;
+}
+
+.screen-votes {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.screen-sub {
+  margin: 0.75rem 0 0;
+  color: var(--text-dim);
+  font-size: clamp(0.9375rem, 1.5vw, 1.25rem);
+}
+
+.screen-badge {
+  align-self: flex-start;
+  margin: 0;
+  padding: 0.375rem 0.875rem;
+  border-radius: 999px;
+  background: var(--bg-sunken);
+  color: var(--text-muted);
+  font-size: 1rem;
+}
+
+.screen .theme-toggle {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  opacity: 0.35;
+  transition: opacity 150ms ease;
+}
+
+.screen .theme-toggle:hover,
+.screen .theme-toggle:focus-within {
+  opacity: 1;
 }
