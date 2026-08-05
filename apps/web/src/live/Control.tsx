@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { formatClock, useCountdown, useLive } from '../lib/live.js';
+import { joinUrl, useInstance } from '../lib/instance.js';
+import { QrCode } from '../components/QrCode.js';
 
 interface Info {
   id: string;
@@ -18,6 +20,7 @@ export function Control() {
   const [overriding, setOverriding] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   const [note, setNote] = useState('');
+  const instance = useInstance();
 
   useEffect(() => {
     void fetch(`/api/sessions/${sessionId}`)
@@ -198,23 +201,57 @@ export function Control() {
         <aside className="split-side">
           <section className="panel">
             <h2>Accesos</h2>
-            <p className="muted">Código de sala</p>
-            <p className="code code-lg">{info?.joinCode}</p>
+            {info && (
+              <div className="access">
+                <QrCode value={joinUrl(instance, info.joinCode)} size={150} />
+                <div>
+                  <p className="muted">Código de sala</p>
+                  <p className="code code-lg">{info.joinCode}</p>
+                  <button
+                    type="button"
+                    className="btn btn-tiny"
+                    onClick={() => void navigator.clipboard?.writeText(joinUrl(instance, info.joinCode))}
+                  >
+                    Copiar enlace
+                  </button>
+                </div>
+              </div>
+            )}
             <p className="hint">
-              Entran desde <code>/join</code>. Los roles con código lo necesitan además del de sala.
+              Escanean el QR o entran a <code>/join</code> con el código.
             </p>
-            <ul className="plain">
-              {info?.roles.map((role) => (
-                <li key={role.id}>
-                  <strong>{role.name}</strong>{' '}
-                  {role.isGeneral ? (
-                    <span className="muted">— entra sin código</span>
-                  ) : (
-                    <code>{role.accessCode}</code>
-                  )}
-                </li>
-              ))}
-            </ul>
+
+            {info?.roles.some((r) => !r.isGeneral) && (
+              <>
+                <h3>Roles con código</h3>
+                <p className="hint">
+                  Estos se entregan aparte, en privado: son los que reparten la información
+                  asimétrica.
+                </p>
+                <ul className="plain role-codes">
+                  {info.roles
+                    .filter((role) => !role.isGeneral)
+                    .map((role) => (
+                      <li key={role.id}>
+                        <QrCode value={joinUrl(instance, info.joinCode, role.accessCode)} size={92} />
+                        <div>
+                          <strong>{role.name}</strong>
+                          <p>
+                            <code>{role.accessCode}</code>
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                </ul>
+              </>
+            )}
+
+            {instance && instance.publicUrl.includes('localhost') && (
+              <p className="alert">
+                Los QR apuntan a <code>{instance.publicUrl}</code>. Desde otro teléfono eso no
+                resuelve: poné la dirección real de esta máquina en <code>PUBLIC_URL</code>.
+              </p>
+            )}
           </section>
 
           <section className="panel">

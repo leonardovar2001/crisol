@@ -1,5 +1,8 @@
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { QrCode } from '../components/QrCode.js';
 import { ThemeToggle } from '../components/ThemeToggle.js';
+import { joinUrl, useInstance } from '../lib/instance.js';
 import { formatClock, useCountdown, useLive } from '../lib/live.js';
 
 /**
@@ -13,6 +16,14 @@ export function Screen() {
   const { sessionId = '' } = useParams();
   const { view, connected } = useLive({ sessionId, screen: '1' });
   const remaining = useCountdown(view);
+  const instance = useInstance();
+  const [joinCode, setJoinCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    void fetch(`/api/sessions/${sessionId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((info: { joinCode: string } | null) => setJoinCode(info?.joinCode ?? null));
+  }, [sessionId]);
 
   if (!view) {
     return (
@@ -27,8 +38,18 @@ export function Screen() {
     return (
       <main className="screen screen-center">
         <p className="screen-idle">
-          {view.status === 'ended' ? 'Terminó el ejercicio' : 'Esperando para empezar'}
+          {view.status === 'ended' ? 'Terminó el ejercicio' : 'Escaneá para entrar'}
         </p>
+
+        {/* Grande y solo en pantalla mientras se llena la sala: es el momento
+            en el que todos están mirando el proyector buscando cómo entrar. */}
+        {view.status !== 'ended' && joinCode && (
+          <div className="screen-join">
+            <QrCode value={joinUrl(instance, joinCode)} size={320} />
+            <p className="screen-code">{joinCode}</p>
+          </div>
+        )}
+
         <p className="screen-sub">{view.participants} en la sala</p>
         <ThemeToggle />
       </main>

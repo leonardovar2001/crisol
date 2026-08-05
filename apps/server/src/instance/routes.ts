@@ -30,6 +30,12 @@ export function registerInstance(app: FastifyInstance, sql: Sql, config: Config)
     return {
       name: config.INSTANCE_NAME,
       defaultLocale: config.DEFAULT_LOCALE,
+      /**
+       * La dirección que se codifica en los QR. Tiene que ser alcanzable desde
+       * los teléfonos de la sala: si acá dice `localhost`, el QR funciona en la
+       * máquina de quien conduce y en ninguna otra.
+       */
+      publicUrl: config.PUBLIC_URL,
       theme: {
         baseColor: row?.baseColor ?? '#0f3040',
         accentColor: row?.accentColor ?? '#4fa8cc',
