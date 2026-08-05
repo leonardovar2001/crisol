@@ -61,6 +61,11 @@ export function Report() {
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
+  /**
+   * El debrief se hace con todos mirando la misma pantalla. Con las notas
+   * ocultas, esta página se puede proyectar sin filtrar lo que anotaste.
+   */
+  const [showNotes, setShowNotes] = useState(true);
 
   const load = useCallback(
     () =>
@@ -112,8 +117,17 @@ export function Report() {
     );
   }
 
+  /** Lo que exportás es lo que estás viendo: con las notas ocultas, no viajan. */
   const exportJson = () => {
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+    const payload = showNotes
+      ? report
+      : {
+          ...report,
+          closingNotes: [],
+          path: report.path.map((p) => ({ ...p, notes: [] })),
+          decisions: report.decisions.map((d) => ({ ...d, notes: [], reason: null })),
+        };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -133,14 +147,29 @@ export function Report() {
           </p>
         </div>
         <div className="row">
+          <button
+            type="button"
+            className={`btn ${showNotes ? 'btn-warn' : ''}`}
+            aria-pressed={showNotes}
+            onClick={() => setShowNotes(!showNotes)}
+          >
+            {showNotes ? 'Notas privadas: visibles' : 'Notas privadas: ocultas'}
+          </button>
           <button type="button" className="btn" onClick={exportJson}>
-            Exportar .json
+            Exportar .json{showNotes ? '' : ' (sin notas)'}
           </button>
           <button type="button" className="btn btn-primary" onClick={() => window.print()}>
-            Imprimir
+            Imprimir o guardar PDF
           </button>
         </div>
       </header>
+
+      {showNotes && (
+        <p className="alert no-print">
+          Tus notas y los motivos de las intervenciones están a la vista. Si vas a proyectar esta
+          pantalla en el debrief, ocultalas primero.
+        </p>
+      )}
 
       <h1 className="only-print">{report.title}</h1>
 
@@ -197,13 +226,16 @@ export function Report() {
 
               {decision.resolvedBy === 'override' && (
                 <p className="note">
+                  {/* Que hubo una intervención es un hecho que la sala presenció:
+                      se muestra siempre. El motivo lo escribió quien conduce
+                      para sí, y sigue la regla de las notas. */}
                   Esta decisión no salió de la votación.
                   {decision.wouldHaveWon && <> La mesa había elegido «{decision.wouldHaveWon}».</>}
-                  {decision.reason && <> Motivo: {decision.reason}</>}
+                  {showNotes && decision.reason && <> Motivo: {decision.reason}</>}
                 </p>
               )}
 
-              {decision.notes.length > 0 && (
+              {showNotes && decision.notes.length > 0 && (
                 <ul className="notes">
                   {decision.notes.map((n) => (
                     <li key={n.id}>
@@ -254,7 +286,7 @@ export function Report() {
         </p>
       )}
 
-      {report.path.some((p) => p.notes.length > 0) && (
+      {showNotes && report.path.some((p) => p.notes.length > 0) && (
         <>
           <h2>Notas durante el ejercicio</h2>
           {report.path
@@ -274,12 +306,14 @@ export function Report() {
         </>
       )}
 
-      <h2>Notas del debrief</h2>
-      <p className="hint no-print">
-        Lo que salió al repasar el ejercicio. Se guarda con la sesión, así que sigue acá la próxima
-        vez que abras este reporte.
-      </p>
-      {report.closingNotes.length > 0 && (
+      {showNotes && <h2>Notas del debrief</h2>}
+      {showNotes && (
+        <p className="hint no-print">
+          Lo que salió al repasar el ejercicio. Se guarda con la sesión, así que sigue acá la
+          próxima vez que abras este reporte.
+        </p>
+      )}
+      {showNotes && report.closingNotes.length > 0 && (
         <ul className="notes">
           {report.closingNotes.map((n) => (
             <li key={n.id}>
@@ -295,7 +329,7 @@ export function Report() {
           ))}
         </ul>
       )}
-      <form className="no-print" onSubmit={addNote}>
+      <form className={`no-print ${showNotes ? '' : 'is-hidden'}`} onSubmit={addNote}>
         <textarea
           rows={3}
           value={draft}

@@ -1097,3 +1097,13 @@ button.option:disabled {
   margin: 0 0 0.75rem;
   color: var(--text-muted);
 }
+
+.is-hidden {
+  display: none;
+}
+
+/* Con las notas a la vista, el botón lo dice fuerte: esta pantalla no se proyecta así. */
+.btn-warn {
+  border-color: var(--danger-border);
+  color: var(--danger);
+}
