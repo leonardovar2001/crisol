@@ -1,7 +1,7 @@
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
-import { parseScenarioFile, type Scenario } from '@crisol/shared';
+import { scenarioSchema, type Scenario } from '@crisol/shared';
 import type { Config } from '../config.js';
 import type { Sql } from '../db/client.js';
 import { newId } from '../ids.js';
@@ -70,7 +70,7 @@ export function registerScenarios(app: FastifyInstance, sql: Sql, config: Config
     const user = await requireUser(request, reply);
     if (!user) return;
 
-    const parsed = parseScenarioFile(request.body);
+    const parsed = scenarioSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.code(400).send({ error: 'El escenario no es válido', issues: parsed.error.issues });
     }
@@ -89,7 +89,7 @@ export function registerScenarios(app: FastifyInstance, sql: Sql, config: Config
     if (!(await requireUser(request, reply))) return;
     const { id } = request.params as { id: string };
 
-    const parsed = parseScenarioFile(request.body);
+    const parsed = scenarioSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.code(400).send({ error: 'El escenario no es válido', issues: parsed.error.issues });
     }

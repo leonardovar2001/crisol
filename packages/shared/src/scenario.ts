@@ -11,10 +11,7 @@ import { z } from 'zod';
  * Adding a field is a minor bump. Removing or repurposing one is a major bump
  * and needs a migration in the importer.
  */
-export const SCHEMA_VERSION = 2;
-
-/** Versiones que el importador todavía sabe leer. Ver `migrateScenario`. */
-export const SUPPORTED_SCHEMA_VERSIONS = [1, 2] as const;
+export const SCHEMA_VERSION = 1;
 
 /** Text in every locale the scenario ships. Keyed by BCP-47 tag: `es`, `en`, `pt-BR`. */
 const localized = z.record(z.string().regex(/^[a-z]{2}(-[A-Z]{2})?$/), z.string());
@@ -152,8 +149,6 @@ export const mediaRefSchema = z.object({
 export const scenarioSchema = z
   .object({
     schemaVersion: z.literal(SCHEMA_VERSION),
-    // Nota: un archivo de una versión anterior no entra por acá directo. Pasa
-    // primero por `migrateScenario`, que lo actualiza. Ver `parseScenarioFile`.
     slug: z.string().regex(/^[a-z0-9-]+$/),
     title: localized,
     description: localized.optional(),
@@ -211,36 +206,3 @@ export type Chart = z.infer<typeof chartSchema>;
 export type ChartEffect = z.infer<typeof chartEffectSchema>;
 export type Role = z.infer<typeof roleSchema>;
 export type Content = z.infer<typeof contentSchema>;
-
-// ── Migración ────────────────────────────────────────────────────────────────
-
-/**
- * Sube un escenario de una versión anterior a la actual.
- *
- * Compartir escenarios es el punto del proyecto: un archivo exportado hace
- * meses tiene que seguir importándose. Cada salto va acá, nunca aflojando la
- * validación del formato actual.
- */
-export function migrateScenario(raw: unknown): unknown {
-  if (typeof raw !== 'object' || raw === null) return raw;
-  const doc = { ...(raw as Record<string, unknown>) };
-
-  // 1 → 2: los roles ganaron `capacity`. Se migra a «sin límite», que es
-  // exactamente como se comportaban antes: cambiar eso en silencio alteraría
-  // ejercicios que ya funcionaban.
-  if (doc.schemaVersion === 1) {
-    if (Array.isArray(doc.roles)) {
-      doc.roles = doc.roles.map((role) =>
-        typeof role === 'object' && role !== null ? { capacity: null, ...role } : role,
-      );
-    }
-    doc.schemaVersion = 2;
-  }
-
-  return doc;
-}
-
-/** Punto de entrada para leer un archivo de escenario de cualquier versión soportada. */
-export function parseScenarioFile(raw: unknown) {
-  return scenarioSchema.safeParse(migrateScenario(raw));
-}

@@ -15,4 +15,4 @@
 - [ ] Todos los commits están firmados con `-s` ([DCO](../CONTRIBUTING.md#dco))
 - [ ] `npm run check` pasa
 - [ ] Si toqué `packages/engine`, sigue sin dependencias de red ni de base de datos
-- [ ] Si cambié el formato de escenario, subí `SCHEMA_VERSION` y actualicé el importador
+- [ ] Si cambié el formato de escenario: hasta el primer release alcanza con cambiarlo. Después habrá que subir `SCHEMA_VERSION` y escribir la migración
