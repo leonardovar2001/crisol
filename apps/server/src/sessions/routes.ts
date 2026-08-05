@@ -120,6 +120,7 @@ export function registerSessions(app: FastifyInstance, sql: Sql) {
 
     const general = session.document.roles.find((role) => role.isGeneral);
     let roleId = general?.id ?? session.document.roles[0]?.id;
+    let usedRoleCode = false;
 
     if (parsed.data.roleCode) {
       const [match] = await sql<{ roleId: string }[]>`
@@ -128,14 +129,43 @@ export function registerSessions(app: FastifyInstance, sql: Sql) {
       `;
       if (!match) return reply.code(403).send({ error: 'Ese código de rol no es válido' });
       roleId = match.roleId;
+      usedRoleCode = true;
     }
     if (!roleId) return reply.code(500).send({ error: 'El escenario no tiene roles' });
+
+    const role = session.document.roles.find((r) => r.id === roleId);
+    const roleName = role?.name[session.document.defaultLocale] ?? '';
+
+    /**
+     * El cupo del rol.
+     *
+     * Es lo que impide que un enlace filtrado convierta a media sala en
+     * Legales. Se cuenta contra los que ya están adentro; los que esperan
+     * aprobación no ocupan lugar todavía.
+     */
+    if (role?.capacity !== null && role?.capacity !== undefined) {
+      const [taken] = await sql<{ count: string }[]>`
+        select count(*)::text from participants
+        where session_id = ${session.id} and role_id = ${roleId} and status = 'active'
+      `;
+      if (Number(taken?.count ?? 0) >= role.capacity) {
+        return reply.code(409).send({
+          error: `El rol ${roleName} ya está completo (${role.capacity} ${
+            role.capacity === 1 ? 'lugar' : 'lugares'
+          }). Pedile a quien conduce que libere uno.`,
+        });
+      }
+    }
+
+    const needsApproval =
+      session.approvalMode === 'all' || (session.approvalMode === 'protected' && usedRoleCode);
 
     const id = newId('par');
     const rejoinToken = newToken();
     await sql`
-      insert into participants (id, session_id, display_name, role_id, rejoin_token)
-      values (${id}, ${session.id}, ${parsed.data.displayName}, ${roleId}, ${rejoinToken})
+      insert into participants (id, session_id, display_name, role_id, rejoin_token, status)
+      values (${id}, ${session.id}, ${parsed.data.displayName}, ${roleId}, ${rejoinToken},
+              ${needsApproval ? 'pending' : 'active'})
     `;
 
     return reply.code(201).send({
@@ -143,9 +173,8 @@ export function registerSessions(app: FastifyInstance, sql: Sql) {
       participantId: id,
       rejoinToken,
       roleId,
-      roleName:
-        session.document.roles.find((r) => r.id === roleId)?.name[session.document.defaultLocale] ??
-        '',
+      roleName,
+      status: needsApproval ? 'pending' : 'active',
     });
   });
 
@@ -157,15 +186,27 @@ export function registerSessions(app: FastifyInstance, sql: Sql) {
     const token = z.object({ rejoinToken: z.string().min(1) }).safeParse(request.body);
     if (!token.success) return reply.code(400).send({ error: 'Falta el token' });
 
-    const [row] = await sql<{ id: string; sessionId: string; roleId: string; displayName: string }[]>`
-      select p.id, p.session_id as "sessionId", p.role_id as "roleId", p.display_name as "displayName"
+    const [row] = await sql<
+      { id: string; sessionId: string; roleId: string; displayName: string; status: string }[]
+    >`
+      select p.id, p.session_id as "sessionId", p.role_id as "roleId",
+             p.display_name as "displayName", p.status
       from participants p
       join sessions s on s.id = p.session_id
       where p.rejoin_token = ${token.data.rejoinToken} and s.status <> 'ended'
     `;
     if (!row) return reply.code(404).send({ error: 'Esa sesión ya no está abierta' });
+    if (row.status === 'rejected') {
+      return reply.code(403).send({ error: 'Quien conduce no te dejó entrar a esta sesión' });
+    }
 
     await sql`update participants set last_seen_at = now() where id = ${row.id}`;
-    return { sessionId: row.sessionId, participantId: row.id, roleId: row.roleId, displayName: row.displayName };
+    return {
+      sessionId: row.sessionId,
+      participantId: row.id,
+      roleId: row.roleId,
+      displayName: row.displayName,
+      status: row.status,
+    };
   });
 }

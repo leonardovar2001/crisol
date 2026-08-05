@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { scenarioSchema } from '@crisol/shared';
+import { parseScenarioFile } from '@crisol/shared';
 import { createDraft } from '../lib/draft.js';
 import { api, ApiError, type ScenarioSummary } from '../lib/api.js';
 import { useSession } from './Session.js';
@@ -47,7 +47,7 @@ export function ScenarioList() {
   const importFile = async (file: File) => {
     setError(null);
     try {
-      const parsed = scenarioSchema.safeParse(JSON.parse(await file.text()));
+      const parsed = parseScenarioFile(JSON.parse(await file.text()));
       if (!parsed.success) {
         const first = parsed.error.issues[0];
         setError(`El archivo no es un escenario válido: ${first?.path.join('.')} — ${first?.message}`);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { scenarioSchema, type Scenario, type SessionEvent } from '@crisol/shared';
+import { SCHEMA_VERSION, scenarioSchema, type Scenario, type SessionEvent } from '@crisol/shared';
 import { countVotes, deriveState, nextPhaseId } from './state.js';
 
 /**
@@ -7,7 +7,7 @@ import { countVotes, deriveState, nextPhaseId } from './state.js';
  * skipping phase 2. Option A takes the default path. One chart moves.
  */
 const scenario: Scenario = scenarioSchema.parse({
-  schemaVersion: 1,
+  schemaVersion: SCHEMA_VERSION,
   slug: 'test',
   title: { es: 'Prueba' },
   defaultLocale: 'es',

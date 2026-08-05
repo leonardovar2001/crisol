@@ -307,12 +307,67 @@ export function Control() {
             </ul>
           </section>
 
+          {(view.pending?.length ?? 0) > 0 && (
+            <section className="panel pending-box">
+              <h2>Piden entrar ({view.pending?.length})</h2>
+              <ul className="plain">
+                {(view.pending ?? []).map((person) => (
+                  <li key={person.id} className="pending-row">
+                    <span>
+                      {person.displayName} <span className="muted">· {person.roleName}</span>
+                    </span>
+                    <span className="row">
+                      <button
+                        type="button"
+                        className="btn btn-tiny btn-primary"
+                        onClick={() => send('admit', { participantId: person.id, admit: true })}
+                      >
+                        Dejar entrar
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-tiny btn-danger"
+                        onClick={() => send('admit', { participantId: person.id, admit: false })}
+                      >
+                        Rechazar
+                      </button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           <section className="panel">
             <h2>En la sala ({view.roster?.length ?? 0})</h2>
+            <label className="field">
+              <span>Quién necesita tu aprobación</span>
+              <select
+                value={view.approvalMode ?? 'none'}
+                onChange={(e) => send('approval_mode', { mode: e.target.value })}
+              >
+                <option value="none">Nadie: entran directo</option>
+                <option value="protected">Sólo los roles con código</option>
+                <option value="all">Todos</option>
+              </select>
+            </label>
             <ul className="plain">
               {(view.roster ?? []).map((person) => (
-                <li key={person.id}>
-                  {person.displayName} <span className="muted">· {person.roleName}</span>
+                <li key={person.id} className="pending-row">
+                  <span>
+                    {person.displayName} <span className="muted">· {person.roleName}</span>
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-danger btn-tiny"
+                    title="Libera su lugar para que otro pueda tomar ese rol"
+                    onClick={() => {
+                      if (confirm(`¿Sacar a ${person.displayName} y liberar su lugar?`))
+                        send('release', { participantId: person.id });
+                    }}
+                  >
+                    Sacar
+                  </button>
                 </li>
               ))}
             </ul>

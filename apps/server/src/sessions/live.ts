@@ -6,7 +6,7 @@ import type { Config } from '../config.js';
 import type { Sql } from '../db/client.js';
 import { COOKIE } from '../auth/routes.js';
 import { newId } from '../ids.js';
-import { append, controlView, currentState, participantView, roster } from './service.js';
+import { append, controlView, currentState, participantView, roster, waitingView } from './service.js';
 
 interface Identity {
   sessionId: string;
@@ -39,24 +39,32 @@ export function registerLive(app: FastifyInstance, sql: Sql, _config: Config) {
     const loaded = await currentState(sql, sessionId);
     if (!loaded) return;
     const people = await roster(sql, sessionId);
-    const control = controlView(loaded.scenario, loaded.state, people);
+    const control = controlView(loaded.scenario, loaded.state, people, loaded.session.approvalMode);
     const serverNow = new Date().toISOString();
 
     const generalRoleId = loaded.scenario.roles.find((role) => role.isGeneral)?.id ?? '';
+    const activos = people.filter((p) => p.status === 'active');
 
     for (const socket of await io.in(`session:${sessionId}`).fetchSockets()) {
       const identity = identities.get(socket as unknown as Socket);
+      // El estado se relee en cada difusión: a quien admiten en mitad de la
+      // sesión le tiene que llegar el contenido sin reconectar.
+      const pendiente =
+        identity?.participantId !== undefined &&
+        people.find((p) => p.id === identity.participantId)?.status === 'pending';
+
       // A participant only ever receives their own role's view; the projected
       // screen gets the general one.
-      const view =
-        identity?.userId && !identity.screen
+      const view = pendiente
+        ? waitingView(activos.length)
+        : identity?.userId && !identity.screen
           ? control
           : participantView(
               loaded.scenario,
               loaded.state,
               identity?.screen ? generalRoleId : (identity?.roleId ?? ''),
               identity?.participantId ?? null,
-              people.length,
+              activos.length,
             );
       socket.emit('state', { ...view, serverNow, runningSince: loaded.state.runningSince });
     }
@@ -147,6 +155,15 @@ export function registerLive(app: FastifyInstance, sql: Sql, _config: Config) {
 
       on('vote', async ({ optionId }: { optionId: string }) => {
         if (!identity.participantId) return;
+
+        // Se relee: pueden haberlo admitido o rechazado desde que se conectó.
+        const [yo] = await sql<{ status: string }[]>`
+          select status from participants where id = ${identity.participantId}
+        `;
+        if (yo?.status !== 'active') {
+          return socket.emit('denied', 'Todavía no te dejaron entrar');
+        }
+
         const loaded = await phaseNow();
         const decision = loaded?.phase?.decision;
         if (!loaded || !decision) return;
@@ -333,6 +350,58 @@ export function registerLive(app: FastifyInstance, sql: Sql, _config: Config) {
         if (!requireFacilitator()) return;
         if (!noteId) return;
         await append(sql, sessionId, { kind: 'note_removed', actor, noteId });
+        await broadcast(sessionId);
+      });
+
+      /** Dejar entrar, o no, a quien pidió un rol protegido. */
+      on('admit', async ({ participantId: quien, admit }: { participantId: string; admit: boolean }) => {
+        if (!requireFacilitator()) return;
+        if (!quien) return;
+
+        if (admit) {
+          const [p] = await sql<{ roleId: string }[]>`
+            select role_id as "roleId" from participants
+            where id = ${quien} and session_id = ${sessionId}
+          `;
+          if (!p) return;
+
+          // El cupo se vuelve a mirar acá: mientras esperaba, el lugar pudo
+          // haberse llenado con otro.
+          const loaded = await currentState(sql, sessionId);
+          const role = loaded?.scenario.roles.find((r) => r.id === p.roleId);
+          if (role?.capacity != null) {
+            const [taken] = await sql<{ count: string }[]>`
+              select count(*)::text from participants
+              where session_id = ${sessionId} and role_id = ${p.roleId} and status = 'active'
+            `;
+            if (Number(taken?.count ?? 0) >= role.capacity) {
+              return socket.emit('denied', 'Ese rol ya está completo: liberá un lugar primero');
+            }
+          }
+        }
+
+        await sql`
+          update participants set status = ${admit ? 'active' : 'rejected'}
+          where id = ${quien} and session_id = ${sessionId}
+        `;
+        await broadcast(sessionId);
+      });
+
+      /** Libera el lugar de alguien que entró al rol equivocado. */
+      on('release', async ({ participantId: quien }: { participantId: string }) => {
+        if (!requireFacilitator()) return;
+        if (!quien) return;
+        await sql`
+          update participants set status = 'rejected'
+          where id = ${quien} and session_id = ${sessionId}
+        `;
+        await broadcast(sessionId);
+      });
+
+      on('approval_mode', async ({ mode }: { mode: string }) => {
+        if (!requireFacilitator()) return;
+        if (!['none', 'protected', 'all'].includes(mode)) return;
+        await sql`update sessions set approval_mode = ${mode} where id = ${sessionId}`;
         await broadcast(sessionId);
       });
 

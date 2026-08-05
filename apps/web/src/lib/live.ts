@@ -22,7 +22,11 @@ export interface LiveView {
   liveTally?: Record<string, number> | null;
   notes?: { id: string; phaseId: string | null; decisionId: string | null; body: string; at: string }[];
   presenterCue?: string;
-  roster?: { id: string; displayName: string; roleName: string }[];
+  roster?: { id: string; displayName: string; roleName: string; status: string }[];
+  pending?: { id: string; displayName: string; roleName: string }[];
+  approvalMode?: string;
+  /** Está esperando que lo dejen entrar: la vista viene vacía a propósito. */
+  awaitingApproval?: boolean;
   nextPhaseTitle?: string | null;
   resultsVisible?: boolean;
 }

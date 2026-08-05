@@ -198,6 +198,11 @@ export function ScenarioEditor() {
             documento que Comunicación no recibe. El rol <strong>general</strong> es el que recibe
             quien entra sólo con el código de sala.
           </p>
+          <p className="hint">
+            El <strong>cupo</strong> es cuánta gente entra en cada rol. Vacío es sin límite, que es
+            lo normal para el general. En los demás conviene ponerlo: el código de rol lo tiene
+            quien lo tenga, y sin cupo un enlace filtrado llena el rol de curiosos.
+          </p>
 
           {sorted(draft.roles).map((role, index) => (
             <div key={role.id} className="stack-row">
@@ -228,6 +233,27 @@ export function ScenarioEditor() {
                   }
                 />
                 general
+              </label>
+              <label className="field-inline">
+                <span>Cupo</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={9999}
+                  aria-label={`Cupo de ${readText(role.name, locale)}`}
+                  placeholder="sin límite"
+                  value={role.capacity ?? ''}
+                  onChange={(e) =>
+                    update({
+                      ...draft,
+                      roles: draft.roles.map((r) =>
+                        r.id === role.id
+                          ? { ...r, capacity: e.target.value ? Math.max(1, Number(e.target.value)) : null }
+                          : r,
+                      ),
+                    })
+                  }
+                />
               </label>
               <button
                 type="button"

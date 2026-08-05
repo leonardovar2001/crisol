@@ -32,6 +32,19 @@ export function Play() {
     );
   }
 
+  if (view.awaitingApproval) {
+    return (
+      <main className="page page-narrow">
+        <h1>Esperando que te dejen entrar</h1>
+        <p className="lede">
+          Pediste un rol que quien conduce tiene que aprobar. Dejá esta pantalla abierta: entra
+          sola cuando te admitan.
+        </p>
+        <p className="note">{view.participants} ya están adentro.</p>
+      </main>
+    );
+  }
+
   return (
     <main className="page page-narrow play">
       <header className="play-head">

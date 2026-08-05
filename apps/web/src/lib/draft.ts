@@ -72,6 +72,9 @@ export function createRole(name: string, locale: string, isGeneral: boolean, ord
     key: slugify(name).replace(/-/g, '_') || `rol_${order}`,
     name: { [locale]: name },
     isGeneral,
+    // El rol general es la sala entera; los protegidos arrancan en una persona,
+    // que es lo que evita que un enlace filtrado los llene de curiosos.
+    capacity: isGeneral ? null : 1,
     sortOrder: order,
   };
 }

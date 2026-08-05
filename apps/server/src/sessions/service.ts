@@ -11,6 +11,7 @@ export interface SessionRow {
   joinCode: string;
   status: 'draft' | 'live' | 'paused' | 'ended';
   locale: string;
+  approvalMode: 'none' | 'protected' | 'all';
 }
 
 /** Six digits: short enough to read out loud across a room. */
@@ -59,7 +60,7 @@ export async function createSession(sql: Sql, scenarioId: string, userId: string
 
 export async function loadSession(sql: Sql, id: string): Promise<SessionRow | null> {
   const [row] = await sql<SessionRow[]>`
-    select id, document, join_code as "joinCode", status, locale
+    select id, document, join_code as "joinCode", status, locale, approval_mode as "approvalMode"
     from sessions where id = ${id}
   `;
   return row ?? null;
@@ -67,7 +68,7 @@ export async function loadSession(sql: Sql, id: string): Promise<SessionRow | nu
 
 export async function findByJoinCode(sql: Sql, code: string): Promise<SessionRow | null> {
   const [row] = await sql<SessionRow[]>`
-    select id, document, join_code as "joinCode", status, locale
+    select id, document, join_code as "joinCode", status, locale, approval_mode as "approvalMode"
     from sessions where join_code = ${code} and status <> 'ended'
   `;
   return row ?? null;
@@ -178,6 +179,28 @@ export interface ParticipantView {
   } | null;
   results: { tally: Record<string, number>; winnerId: string | null; byFacilitator: boolean } | null;
   participants: number;
+  /** Está esperando que lo dejen entrar: no recibe nada del contenido. */
+  awaitingApproval?: boolean;
+}
+
+/**
+ * Lo que ve quien todavía no fue admitido: nada.
+ *
+ * No es la vista normal con un cartel encima — el contenido no sale del
+ * servidor. Si alguien pide un rol que no le corresponde y queda esperando,
+ * abrir las herramientas de desarrollo no le muestra el material de ese rol.
+ */
+export function waitingView(participantCount: number): ParticipantView {
+  return {
+    status: 'draft',
+    phase: null,
+    remainingSeconds: null,
+    contents: [],
+    decision: null,
+    results: null,
+    participants: participantCount,
+    awaitingApproval: true,
+  };
 }
 
 /**
@@ -270,7 +293,10 @@ export interface ControlView extends ParticipantView {
   /** Private notes. Deliberately absent from `ParticipantView`. */
   notes: { id: string; phaseId: string | null; decisionId: string | null; body: string; at: string }[];
   presenterCue: string;
-  roster: { id: string; displayName: string; roleName: string }[];
+  roster: { id: string; displayName: string; roleName: string; status: string }[];
+  /** Quienes esperan que los dejes entrar a un rol protegido. */
+  pending: { id: string; displayName: string; roleName: string }[];
+  approvalMode: string;
   nextPhaseTitle: string | null;
   resultsVisible: boolean;
 }
@@ -278,10 +304,14 @@ export interface ControlView extends ParticipantView {
 export function controlView(
   scenario: Scenario,
   state: SessionState,
-  roster: { id: string; displayName: string; roleId: string }[],
+  roster: { id: string; displayName: string; roleId: string; status: string }[],
+  approvalMode = 'none',
 ): ControlView {
   const locale = scenario.defaultLocale;
-  const base = participantView(scenario, state, '', null, roster.length);
+  const active = roster.filter((p) => p.status === 'active');
+  // Quien espera aprobación todavía no está en la sala: no cuenta para el
+  // total ni para el cupo de su rol.
+  const base = participantView(scenario, state, '', null, active.length);
   const ordered = [...scenario.phases].sort((a, b) => a.sortOrder - b.sortOrder);
   const phase = ordered.find((p) => p.id === state.currentPhaseId) ?? null;
   const decision = phase?.decision ?? null;
@@ -307,19 +337,30 @@ export function controlView(
     liveTally: decision ? countVotes(decision, state.votes[decision.id] ?? {}).tally : null,
     notes: state.notes,
     presenterCue: phase ? text(phase.presenterCue, locale) : '',
-    roster: roster.map((p) => ({
+    roster: active.map((p) => ({
       id: p.id,
       displayName: p.displayName,
       roleName: text(scenario.roles.find((r) => r.id === p.roleId)?.name, locale),
+      status: p.status,
     })),
+    pending: roster
+      .filter((p) => p.status === 'pending')
+      .map((p) => ({
+        id: p.id,
+        displayName: p.displayName,
+        roleName: text(scenario.roles.find((r) => r.id === p.roleId)?.name, locale),
+      })),
+    approvalMode,
     nextPhaseTitle: next ? text(ordered.find((p) => p.id === next)?.title, locale) : null,
     resultsVisible: state.resultsVisible,
   };
 }
 
 export async function roster(sql: Sql, sessionId: string) {
-  return sql<{ id: string; displayName: string; roleId: string }[]>`
-    select id, display_name as "displayName", role_id as "roleId"
-    from participants where session_id = ${sessionId} order by first_seen_at
+  return sql<{ id: string; displayName: string; roleId: string; status: 'active' | 'pending' | 'rejected' }[]>`
+    select id, display_name as "displayName", role_id as "roleId", status
+    from participants
+    where session_id = ${sessionId} and status <> 'rejected'
+    order by first_seen_at
   `;
 }

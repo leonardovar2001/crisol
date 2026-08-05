@@ -1176,3 +1176,15 @@ h3 {
   line-height: 1;
   color: var(--accent);
 }
+
+.pending-box {
+  border-color: var(--accent-strong);
+}
+
+.pending-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
