@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { Chart } from '../components/Chart.js';
 import { QrCode } from '../components/QrCode.js';
 import { ThemeToggle } from '../components/ThemeToggle.js';
 import { joinUrl, useInstance } from '../lib/instance.js';
@@ -87,6 +88,10 @@ export function Screen() {
             {content.kind === 'audio' && content.mediaUrl && <audio src={content.mediaUrl} controls />}
             {content.body && <p>{content.body}</p>}
           </section>
+        ))}
+
+        {(view.charts ?? []).map((c) => (
+          <Chart key={c.key} data={c} />
         ))}
 
         {decision && (

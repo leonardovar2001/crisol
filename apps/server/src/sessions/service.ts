@@ -1,6 +1,6 @@
 import { randomInt } from 'node:crypto';
 import type postgres from 'postgres';
-import { scenarioSchema, sessionEventSchema, type Scenario, type SessionEvent } from '@crisol/shared';
+import { scenarioSchema, sessionEventSchema, type Phase, type Scenario, type SessionEvent } from '@crisol/shared';
 import { countVotes, deriveState, nextPhaseId, type SessionState } from '@crisol/engine';
 import type { Sql } from '../db/client.js';
 import { newId, newToken } from '../ids.js';
@@ -179,8 +179,19 @@ export interface ParticipantView {
   } | null;
   results: { tally: Record<string, number>; winnerId: string | null; byFacilitator: boolean } | null;
   participants: number;
+  /** Los que esta fase muestra a este rol, con los valores acumulados hasta ahora. */
+  charts: ChartView[];
   /** Está esperando que lo dejen entrar: no recibe nada del contenido. */
   awaitingApproval?: boolean;
+}
+
+export interface ChartView {
+  key: string;
+  title: string;
+  kind: 'stat' | 'bar' | 'pie' | 'line';
+  unit: string | null;
+  labels: string[];
+  series: Record<string, number[]>;
 }
 
 /**
@@ -199,8 +210,38 @@ export function waitingView(participantCount: number): ParticipantView {
     decision: null,
     results: null,
     participants: participantCount,
+    charts: [],
     awaitingApproval: true,
   };
+}
+
+/**
+ * Los gráficos que esta fase le muestra a este rol.
+ *
+ * Se filtra acá y no en el navegador, igual que el contenido: un tablero que no
+ * te corresponde no tiene por qué llegar a tu dispositivo. Los valores son los
+ * acumulados por el motor, no los iniciales del escenario.
+ */
+function chartsFor(scenario: Scenario, state: SessionState, phase: Phase | null, roleId: string): ChartView[] {
+  if (!phase) return [];
+  const locale = scenario.defaultLocale;
+
+  return phase.visibleCharts
+    .filter((ref) => ref.roleId === null || ref.roleId === roleId)
+    .flatMap((ref) => {
+      const chart = scenario.charts.find((c) => c.key === ref.chartKey);
+      if (!chart) return [];
+      return [
+        {
+          key: chart.key,
+          title: text(chart.title, locale),
+          kind: chart.kind,
+          unit: chart.unit ?? null,
+          labels: chart.labels.map((label) => text(label, locale)),
+          series: state.charts[chart.key] ?? chart.initialSeries,
+        },
+      ];
+    });
 }
 
 /**
@@ -230,6 +271,7 @@ export function participantView(
       decision: null,
       results: null,
       participants: participantCount,
+      charts: [],
     };
   }
 
@@ -284,6 +326,7 @@ export function participantView(
           }
         : null,
     participants: participantCount,
+    charts: chartsFor(scenario, state, phase, roleId),
   };
 }
 
@@ -334,6 +377,22 @@ export function controlView(
   return {
     ...base,
     contents,
+    // Sin filtrar, igual que el contenido: quien conduce necesita saber qué
+    // está mirando cada rol para llevar la sala.
+    charts: (phase?.visibleCharts ?? []).flatMap((ref) => {
+      const chart = scenario.charts.find((c) => c.key === ref.chartKey);
+      if (!chart) return [];
+      return [
+        {
+          key: chart.key,
+          title: text(chart.title, locale),
+          kind: chart.kind,
+          unit: chart.unit ?? null,
+          labels: chart.labels.map((label) => text(label, locale)),
+          series: state.charts[chart.key] ?? chart.initialSeries,
+        },
+      ];
+    }),
     liveTally: decision ? countVotes(decision, state.votes[decision.id] ?? {}).tally : null,
     notes: state.notes,
     presenterCue: phase ? text(phase.presenterCue, locale) : '',

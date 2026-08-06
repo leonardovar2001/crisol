@@ -335,6 +335,59 @@ export function PhaseEditor({ scenarioId, draft, phase, locale, onChange, onDele
         Agregar bloque
       </button>
 
+      {draft.charts.length > 0 && (
+        <>
+          <hr />
+          <h2>Gráficos en esta fase</h2>
+          <p className="hint">
+            Sin rol los ve todo el mundo, igual que un bloque de contenido. Con rol, sólo ese — y
+            entonces tampoco aparece en la pantalla proyectada.
+          </p>
+
+          {draft.charts.map((chart) => {
+            const ref = phase.visibleCharts.find((r) => r.chartKey === chart.key);
+            return (
+              <div key={chart.id} className="row chart-visibility">
+                <label className="checkbox">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(ref)}
+                    onChange={(e) =>
+                      patch({
+                        visibleCharts: e.target.checked
+                          ? [...phase.visibleCharts, { chartKey: chart.key, roleId: null }]
+                          : phase.visibleCharts.filter((r) => r.chartKey !== chart.key),
+                      })
+                    }
+                  />
+                  {readText(chart.title, locale) || chart.key}
+                </label>
+                {ref && (
+                  <select
+                    aria-label={`Quién ve ${readText(chart.title, locale)}`}
+                    value={ref.roleId ?? ''}
+                    onChange={(e) =>
+                      patch({
+                        visibleCharts: phase.visibleCharts.map((r) =>
+                          r.chartKey === chart.key ? { ...r, roleId: e.target.value || null } : r,
+                        ),
+                      })
+                    }
+                  >
+                    <option value="">Todos los roles</option>
+                    {sorted(draft.roles).map((r) => (
+                      <option key={r.id} value={r.id}>
+                        Sólo {readText(r.name, locale)}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            );
+          })}
+        </>
+      )}
+
       <hr />
 
       <h2>Decisión</h2>

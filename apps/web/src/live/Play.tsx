@@ -1,4 +1,5 @@
 import { useParams } from 'react-router-dom';
+import { Chart } from '../components/Chart.js';
 import { formatClock, useCountdown, useLive } from '../lib/live.js';
 import { readSeat } from './Join.js';
 
@@ -82,6 +83,10 @@ export function Play() {
           )}
           {content.body && <p>{content.body}</p>}
         </section>
+      ))}
+
+      {(view.charts ?? []).map((c) => (
+        <Chart key={c.key} data={c} />
       ))}
 
       {view.decision && (

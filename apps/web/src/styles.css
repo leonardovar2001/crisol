@@ -39,6 +39,18 @@
   --danger: #ffb4a8;
   --danger-bg: color-mix(in oklab, #7d4a41 30%, var(--bg-sunken));
   --danger-border: #7d4a41;
+
+  /*
+   * Colores de categoría para los gráficos. Son los únicos que no salen del
+   * color base: unas barras o porciones que sólo se distinguen por claridad
+   * no se distinguen. Necesitan tonos separados de verdad.
+   */
+  --chart-1: #5cc8e8;
+  --chart-2: #f2b45c;
+  --chart-3: #7fd6a6;
+  --chart-4: #e88fa8;
+  --chart-5: #b09ce8;
+  --chart-6: #e8d05c;
 }
 
 /*
@@ -70,6 +82,13 @@
   --danger: #9a2f21;
   --danger-bg: color-mix(in oklab, #9a2f21 8%, white);
   --danger-border: color-mix(in oklab, #9a2f21 35%, white);
+
+  --chart-1: #1c7f9e;
+  --chart-2: #a86a12;
+  --chart-3: #1f7d55;
+  --chart-4: #a83e5c;
+  --chart-5: #5f45a8;
+  --chart-6: #8a7410;
 }
 
 *,
@@ -1187,4 +1206,203 @@ h3 {
   justify-content: space-between;
   gap: 0.75rem;
   flex-wrap: wrap;
+}
+
+/* ── Gráficos ────────────────────────────────────────────────────────────── */
+
+.chart {
+  margin: 0 0 1rem;
+  padding: 1rem 1.125rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+}
+
+.chart figcaption {
+  margin-bottom: 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.chart-stat {
+  margin: 0;
+  font-size: clamp(2.25rem, 8vw, 4rem);
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--chart-1);
+}
+
+.chart-unit {
+  margin-left: 0.375rem;
+  font-size: 0.4em;
+  font-weight: 400;
+  color: var(--text-dim);
+}
+
+.chart-bars {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.chart-bar-row {
+  display: grid;
+  grid-template-columns: minmax(4rem, 8rem) 1fr auto;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.9375rem;
+}
+
+.chart-bar-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+
+.chart-bar-track {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.chart-bar-fill {
+  display: block;
+  height: 0.875rem;
+  min-width: 2px;
+  border-radius: 3px;
+}
+
+.chart-bar-value {
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.chart-pie-wrap {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.chart-pie-wrap svg {
+  flex: none;
+  width: clamp(7rem, 22vw, 11rem);
+  /* El anillo arranca arriba, no a las tres en punto. */
+  transform: rotate(-90deg);
+}
+
+.chart-pie-legend {
+  flex: 1;
+  min-width: 9rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9375rem;
+}
+
+.chart-pie-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.1875rem 0;
+  color: var(--text-muted);
+}
+
+.chart-pie-legend strong {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.chart-line-wrap svg {
+  width: 100%;
+  height: clamp(6rem, 18vw, 10rem);
+  overflow: visible;
+}
+
+.chart-line-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.375rem;
+  color: var(--text-dim);
+  font-size: 0.8125rem;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem 1rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-dim);
+  font-size: 0.8125rem;
+}
+
+.chart-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.chart-swatch {
+  display: inline-block;
+  flex: none;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 3px;
+}
+
+/* En la pantalla proyectada todo crece: se mira desde el fondo de la sala. */
+.screen .chart figcaption {
+  font-size: clamp(1rem, 1.8vw, 1.5rem);
+}
+
+.screen .chart-stat {
+  font-size: clamp(3rem, 11vw, 8rem);
+}
+
+.screen .chart-bar-row,
+.screen .chart-pie-legend {
+  font-size: clamp(1rem, 1.8vw, 1.625rem);
+}
+
+.screen .chart-bar-fill {
+  height: 1.5rem;
+}
+
+.values-table {
+  width: 100%;
+  margin: 0 0 0.75rem;
+  border-collapse: collapse;
+}
+
+.values-table th,
+.values-table td {
+  padding: 2px 4px 2px 0;
+  text-align: left;
+}
+
+.values-table th input {
+  font-size: 0.8125rem;
+}
+
+.values-table input[type='number'] {
+  width: 100%;
+  min-width: 4.5rem;
+}
+
+.unit-input {
+  width: 9rem;
+}
+
+.effect-row .field {
+  margin-bottom: 0.5rem;
+}
+
+.chart-visibility {
+  padding: 0.25rem 0;
 }

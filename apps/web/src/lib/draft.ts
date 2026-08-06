@@ -147,3 +147,47 @@ export function formatDuration(seconds: number | null): string {
   const s = seconds % 60;
   return s === 0 ? `${m} min` : `${m}:${String(s).padStart(2, '0')}`;
 }
+
+// ── Gráficos ─────────────────────────────────────────────────────────────────
+
+export type Chart = Draft['charts'][number];
+export type ChartEffect = Chart['effects'][number];
+export type ChartRef = Phase['visibleCharts'][number];
+
+export function createChart(title: string, locale: string, existing: Chart[]): Chart {
+  const base = slugify(title).replace(/-/g, '_') || 'grafico';
+  // La clave la usan las fases para referirse al gráfico: tiene que ser única.
+  let key = base;
+  for (let n = 2; existing.some((c) => c.key === key); n += 1) key = `${base}_${n}`;
+
+  return {
+    id: newId('graf'),
+    key,
+    title: { [locale]: title },
+    kind: 'stat',
+    labels: [{ [locale]: 'Valor' }],
+    initialSeries: { serie: [0] },
+    effects: [],
+  };
+}
+
+export function createChartEffect(phaseId: string, series: string): ChartEffect {
+  return {
+    id: newId('efe'),
+    trigger: { kind: 'on_phase_enter', phaseId },
+    targetSeries: series,
+    targetPoint: null,
+    operation: 'add',
+    value: 10,
+  };
+}
+
+/** Ajusta todas las series cuando se agrega o quita una etiqueta. */
+export function resizeSeries(chart: Chart, largo: number): Chart['initialSeries'] {
+  return Object.fromEntries(
+    Object.entries(chart.initialSeries).map(([nombre, valores]) => [
+      nombre,
+      Array.from({ length: largo }, (_, i) => valores[i] ?? 0),
+    ]),
+  );
+}

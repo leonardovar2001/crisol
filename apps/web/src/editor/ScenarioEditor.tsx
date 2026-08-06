@@ -14,8 +14,9 @@ import {
 } from '../lib/draft.js';
 import { api, ApiError } from '../lib/api.js';
 import { PhaseEditor } from './PhaseEditor.js';
+import { ChartsPanel } from './ChartsPanel.js';
 
-type Tab = 'datos' | 'roles' | 'fases';
+type Tab = 'datos' | 'roles' | 'fases' | 'graficos';
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 export function ScenarioEditor() {
@@ -120,14 +121,14 @@ export function ScenarioEditor() {
         </div>
 
         <nav className="tabs">
-          {(['fases', 'roles', 'datos'] as const).map((t) => (
+          {(['fases', 'roles', 'graficos', 'datos'] as const).map((t) => (
             <button
               key={t}
               type="button"
               className={`tab ${tab === t ? 'is-active' : ''}`}
               onClick={() => setTab(t)}
             >
-              {t === 'fases' ? 'Fases' : t === 'roles' ? 'Roles' : 'Datos'}
+              {t === 'fases' ? 'Fases' : t === 'roles' ? 'Roles' : t === 'graficos' ? 'Gráficos' : 'Datos'}
             </button>
           ))}
         </nav>
@@ -292,6 +293,8 @@ export function ScenarioEditor() {
           </button>
         </section>
       )}
+
+      {tab === 'graficos' && <ChartsPanel draft={draft} locale={locale} onChange={update} />}
 
       {tab === 'fases' && (
         <div className="split">

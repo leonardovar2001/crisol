@@ -103,8 +103,21 @@ export const chartSchema = z.object({
   id,
   key: z.string().regex(/^[a-z0-9_]+$/),
   title: localized,
-  kind: z.enum(['line', 'bar', 'pie', 'stat', 'gauge']),
+  /**
+   * `stat` es un número solo; `bar` y `pie` comparan pocas categorías; `line`
+   * muestra una tendencia. Todos tienen que leerse en un teléfono, que es donde
+   * los mira la mayoría de la sala.
+   */
+  kind: z.enum(['stat', 'bar', 'pie', 'line']),
   unit: z.string().max(16).optional(),
+  /**
+   * Cómo se llama cada valor de una serie: «Reclamos», «Enero», «Sodio».
+   *
+   * Sin esto una torta es un montón de porciones anónimas y nadie puede saber
+   * qué es la porción 2. Se comparte entre todas las series del gráfico: son
+   * las mismas categorías medidas distinto.
+   */
+  labels: z.array(localized).default([]),
   /** Starting values, before any effect has fired. */
   initialSeries: z.record(z.string(), z.array(z.number())),
   effects: z.array(chartEffectSchema).default([]),
@@ -131,8 +144,17 @@ export const phaseSchema = z.object({
   /** The facilitator's script. Never shown to participants or on the projected screen. */
   presenterCue: localized.optional(),
   contents: z.array(contentSchema).default([]),
-  /** Chart keys visible during this phase. */
-  visibleCharts: z.array(z.string()).default([]),
+  /**
+   * Qué gráficos se ven en esta fase, y quién los ve.
+   *
+   * `roleId` en `null` es «todos», igual que en un bloque de contenido. Decir
+   * que un gráfico siempre es público sería una suposición sobre cómo funcionan
+   * los ejercicios, y el motor no puede hacer suposiciones así: un docente puede
+   * querer que cada equipo mire su propio tablero.
+   */
+  visibleCharts: z
+    .array(z.object({ chartKey: z.string(), roleId: id.nullable().default(null) }))
+    .default([]),
   decision: decisionSchema.nullable().default(null),
 });
 
@@ -170,6 +192,7 @@ export const scenarioSchema = z
 
     const phaseIds = new Set(scenario.phases.map((p) => p.id));
     const chartKeys = new Set(scenario.charts.map((c) => c.key));
+    const roleIds = new Set(scenario.roles.map((r) => r.id));
 
     const reportDangling = (target: string | null, path: (string | number)[]) => {
       if (target !== null && !phaseIds.has(target)) {
@@ -181,19 +204,68 @@ export const scenarioSchema = z
       }
     };
 
+    /**
+     * Un rol que ya no existe no rompe nada visiblemente: el bloque
+     * simplemente deja de mostrarse y nadie se entera hasta el ejercicio.
+     */
+    const reportUnknownRole = (roleId: string | null, path: (string | number)[]) => {
+      if (roleId !== null && !roleIds.has(roleId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path,
+          message: `apunta a un rol que no existe: "${roleId}"`,
+        });
+      }
+    };
+
+    scenario.charts.forEach((chart, i) => {
+      const series = Object.entries(chart.initialSeries);
+
+      // Todas las series de un gráfico miden las mismas categorías: si tienen
+      // largos distintos, no hay forma de dibujarlas juntas.
+      const largos = new Set(series.map(([, values]) => values.length));
+      if (largos.size > 1) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['charts', i, 'initialSeries'],
+          message: 'todas las series tienen que tener la misma cantidad de valores',
+        });
+      }
+
+      const largo = series[0]?.[1].length ?? 0;
+      if (chart.labels.length > 0 && chart.labels.length !== largo) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['charts', i, 'labels'],
+          message: `hay ${chart.labels.length} etiquetas para ${largo} valores`,
+        });
+      }
+      if (chart.kind === 'pie' && chart.labels.length === 0 && largo > 1) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['charts', i, 'labels'],
+          message: 'una torta sin etiquetas es un montón de porciones anónimas',
+        });
+      }
+    });
+
     scenario.phases.forEach((phase, i) => {
       reportDangling(phase.nextPhaseId, ['phases', i, 'nextPhaseId']);
       phase.decision?.options.forEach((option, j) => {
         reportDangling(option.nextPhaseId, ['phases', i, 'decision', 'options', j, 'nextPhaseId']);
       });
-      phase.visibleCharts.forEach((key, j) => {
-        if (!chartKeys.has(key)) {
+      phase.contents.forEach((content, j) => {
+        reportUnknownRole(content.roleId, ['phases', i, 'contents', j, 'roleId']);
+      });
+      phase.visibleCharts.forEach((ref, j) => {
+        if (!chartKeys.has(ref.chartKey)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            path: ['phases', i, 'visibleCharts', j],
-            message: `unknown chart "${key}"`,
+            path: ['phases', i, 'visibleCharts', j, 'chartKey'],
+            message: `unknown chart "${ref.chartKey}"`,
           });
         }
+        reportUnknownRole(ref.roleId, ['phases', i, 'visibleCharts', j, 'roleId']);
       });
     });
   });

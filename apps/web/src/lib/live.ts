@@ -18,6 +18,7 @@ export interface LiveView {
   } | null;
   results: { tally: Record<string, number>; winnerId: string | null; byFacilitator: boolean } | null;
   participants: number;
+  charts: import('../components/Chart.js').ChartData[];
   // Only present on the facilitator's view.
   liveTally?: Record<string, number> | null;
   notes?: { id: string; phaseId: string | null; decisionId: string | null; body: string; at: string }[];

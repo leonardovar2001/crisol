@@ -18,6 +18,7 @@ const scenario: Scenario = scenarioSchema.parse({
       key: 'reclamos',
       title: { es: 'Reclamos' },
       kind: 'line',
+      labels: [{ es: 'Ene' }, { es: 'Feb' }, { es: 'Mar' }],
       initialSeries: { total: [100, 100, 100] },
       effects: [
         {
@@ -46,7 +47,7 @@ const scenario: Scenario = scenarioSchema.parse({
       title: { es: 'Apertura' },
       kind: 'decision',
       durationSeconds: 600,
-      visibleCharts: ['reclamos'],
+      visibleCharts: [{ chartKey: 'reclamos' }],
       decision: {
         id: 'd1',
         prompt: { es: '¿Qué hacemos?' },

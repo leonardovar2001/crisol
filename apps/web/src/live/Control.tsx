@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { formatClock, useCountdown, useLive } from '../lib/live.js';
 import { joinUrl, useInstance } from '../lib/instance.js';
 import { QrCode } from '../components/QrCode.js';
+import { Chart } from '../components/Chart.js';
 
 interface Info {
   id: string;
@@ -133,6 +134,10 @@ export function Control() {
               </button>
             )}
           </div>
+
+          {(view.charts ?? []).map((ch) => (
+            <Chart key={ch.key} data={ch} />
+          ))}
 
           {decision && (
             <>
